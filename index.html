@@ -195,11 +195,21 @@
         <div class="content-card">
             <div class="content-inner">
 
-                <!-- Step 1: Data Elements -->
+                <!-- Step 1: Data Elements / Indicators -->
                 <div class="section-header">
                     <span class="section-icon">1</span>
-                    <span class="section-title">SELECT DATA ELEMENTS</span>
+                    <span class="section-title">SELECT DATA ELEMENTS OR INDICATORS</span>
                 </div>
+
+                <div style="display:flex;gap:10px;margin-bottom:16px;">
+                    <div id="modeTabDE" onclick="switchDataMode('de')" style="padding:9px 22px;background:#004080;color:#fff;border:2px solid #004080;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Oswald',Arial,sans-serif;">Data Elements</div>
+                    <div id="modeTabInd" onclick="switchDataMode('ind')" style="padding:9px 22px;background:#fff;color:#004080;border:2px solid #004080;border-radius:6px;font-size:13px;font-weight:700;cursor:pointer;font-family:'Oswald',Arial,sans-serif;">Indicators</div>
+                </div>
+                <div class="info-text" style="margin-bottom:16px;">
+                    <strong>Data Elements</strong> are raw values entered at facilities. <strong>Indicators</strong> are calculated (e.g. from a formula) and are read via the analytics engine — use this if the number you're chasing matches a Pivot Table / analytics figure rather than a raw entry field.
+                </div>
+
+                <div id="deModeContainer">
                 <div style="margin-bottom:15px;">
                     <button type="button" class="btn-secondary" onclick="loadDatasetsWithElements()" style="width:auto;">Load Datasets</button>
                 </div>
@@ -235,6 +245,46 @@
                         <button type="button" class="panel-action-btn clear-all-btn" onclick="clearAllItems()">Clear All</button>
                         <div class="panel-content" id="selectedPanel">
                             <p style="color:#666;text-align:center;padding:20px;">No items selected yet</p>
+                        </div>
+                    </div>
+                </div>
+                </div>
+
+                <div id="indModeContainer" style="display:none;">
+                    <div style="margin-bottom:15px;">
+                        <button type="button" class="btn-secondary" onclick="loadIndicatorsList()" style="width:auto;">Load Indicators</button>
+                    </div>
+                    <div class="dual-panel-container">
+                        <div class="panel">
+                            <div class="panel-header">
+                                <div class="panel-title">
+                                    Available Indicators
+                                    <span class="panel-count" id="indAvailableCount">0 items</span>
+                                </div>
+                            </div>
+                            <div style="position:relative;">
+                                <input type="text" class="search-box" id="indAvailableSearch" placeholder="Search indicators..." onkeyup="renderIndAvailable()" style="padding-right:90px;">
+                                <button type="button" onclick="document.getElementById('indAvailableSearch').value='';renderIndAvailable()" title="Clear search" style="position:absolute;right:6px;top:50%;transform:translateY(-50%);background:#dc3545;color:white;border:none;border-radius:4px;padding:3px 10px;font-family:'Oswald',Arial,sans-serif;font-size:11px;font-weight:700;cursor:pointer;">&#x2715; Clear</button>
+                            </div>
+                            <div style="padding:5px 10px;background:#f0f0f0;border-bottom:1px solid #ddd;">
+                                <button type="button" class="panel-action-btn add-all-btn" onclick="addAllIndicators()" style="width:auto;padding:4px 10px;font-size:11px;display:inline-block;">Add All Visible</button>
+                            </div>
+                            <div class="panel-content" id="indAvailablePanel">
+                                <p style="color:#666;text-align:center;padding:20px;">Click "Load Indicators" to fetch the indicator list...</p>
+                            </div>
+                        </div>
+                        <div class="panel">
+                            <div class="panel-header">
+                                <div class="panel-title">
+                                    Selected Indicators
+                                    <span class="panel-count" id="indSelectedCount">0 items</span>
+                                </div>
+                            </div>
+                            <input type="text" class="search-box" id="indSelectedSearch" placeholder="Search selected..." onkeyup="renderIndSelected()">
+                            <button type="button" class="panel-action-btn clear-all-btn" onclick="clearAllIndicators()">Clear All</button>
+                            <div class="panel-content" id="indSelectedPanel">
+                                <p style="color:#666;text-align:center;padding:20px;">No indicators selected yet</p>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -329,18 +379,32 @@
                     <div class="period-inputs" id="weekly-inputs">
                         <div class="form-row">
                             <div class="form-group">
-                                <label class="form-label">Year-Week</label>
-                                <input type="week" class="form-input" name="periodWeek" id="periodWeek">
+                                <label class="form-label">Year</label>
+                                <input type="number" class="form-input" name="weekYear" id="weekYear" min="2000" max="2035" placeholder="e.g. 2026">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Week</label>
+                                <select class="form-select" name="weekNum" id="weekNum"></select>
                             </div>
                         </div>
                         <div class="form-row">
                             <div class="form-group">
-                                <label class="form-label">Or Start Week (range)</label>
-                                <input type="week" class="form-input" name="periodWeekStart" id="periodWeekStart">
+                                <label class="form-label">Or Start Year (range)</label>
+                                <input type="number" class="form-input" name="weekStartYear" id="weekStartYear" min="2000" max="2035" placeholder="Start year">
                             </div>
                             <div class="form-group">
-                                <label class="form-label">End Week (range)</label>
-                                <input type="week" class="form-input" name="periodWeekEnd" id="periodWeekEnd">
+                                <label class="form-label">Start Week</label>
+                                <select class="form-select" name="weekStartNum" id="weekStartNum"></select>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">End Year (range)</label>
+                                <input type="number" class="form-input" name="weekEndYear" id="weekEndYear" min="2000" max="2035" placeholder="End year">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">End Week</label>
+                                <select class="form-select" name="weekEndNum" id="weekEndNum"></select>
                             </div>
                         </div>
                     </div>
@@ -425,6 +489,10 @@ const state = { config: null, isLoggedIn: false };
 
 let datasetsData = [];
 let selectedDataElements = new Map();
+let allIndicatorsData  = [];       // [{id, name}]
+let selectedIndicators = new Map(); // uid -> name
+let dataMode = 'de';                // 'de' | 'ind'
+function esc(s) { return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
 let orgUnitsData = [];
 let allOrgUnitsData = [];
 let selectedOrgUnits = new Set();
@@ -566,6 +634,28 @@ function generateMonthlyPeriods(startYearMonth, endYearMonth) {
     return periods;
 }
 
+// DHIS2 weekly periods run Week 1 through Week 52.
+function populateWeekOptions(weekSelectId) {
+    const select = document.getElementById(weekSelectId);
+    select.innerHTML = '';
+    for (let w = 1; w <= 52; w++) {
+        const opt = document.createElement('option');
+        opt.value = w;
+        opt.textContent = 'Week ' + w;
+        select.appendChild(opt);
+    }
+}
+
+(function initWeekDropdowns() {
+    const y = new Date().getFullYear();
+    document.getElementById('weekYear').value      = y;
+    document.getElementById('weekStartYear').value = y;
+    document.getElementById('weekEndYear').value   = y;
+    populateWeekOptions('weekNum');
+    populateWeekOptions('weekStartNum');
+    populateWeekOptions('weekEndNum');
+})();
+
 function isoWeekToDate(year, week) {
     const simple = new Date(Date.UTC(year, 0, 1 + (week - 1) * 7));
     const dayOfWeek = simple.getUTCDay() || 7;
@@ -614,20 +704,22 @@ function getPeriodFromForm() {
         const period = document.querySelector('#monthly-inputs input[name="period"]')?.value;
         if (period) { const fp = period.replace('-', ''); selectedPeriodsForExport = [fp]; return `period=${fp}`; }
     } else if (tabText === 'weekly') {
-        const single = document.querySelector('#weekly-inputs input[name="periodWeek"]')?.value;
-        const wStart = document.querySelector('#weekly-inputs input[name="periodWeekStart"]')?.value;
-        const wEnd   = document.querySelector('#weekly-inputs input[name="periodWeekEnd"]')?.value;
-        if (wStart && wEnd) {
-            selectedPeriodsForExport = generateWeeklyPeriods(wStart, wEnd);
-            const [sy, sw] = wStart.split('-W').map(Number);
-            const [ey, ew] = wEnd.split('-W').map(Number);
+        const y     = parseInt(document.getElementById('weekYear').value, 10);
+        const w     = parseInt(document.getElementById('weekNum').value, 10);
+        const sy    = parseInt(document.getElementById('weekStartYear').value, 10);
+        const sw    = parseInt(document.getElementById('weekStartNum').value, 10);
+        const ey    = parseInt(document.getElementById('weekEndYear').value, 10);
+        const ew    = parseInt(document.getElementById('weekEndNum').value, 10);
+        const rangeGiven  = sy && sw && ey && ew;
+        const singleGiven = y && w;
+        if (rangeGiven) {
+            selectedPeriodsForExport = generateWeeklyPeriods(`${sy}-W${String(sw).padStart(2,'0')}`, `${ey}-W${String(ew).padStart(2,'0')}`);
             const startDate = isoWeekToDate(sy, sw);
             const endDate   = isoWeekToDate(ey, ew);
             endDate.setUTCDate(endDate.getUTCDate() + 6);
             const fmt = d => `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`;
             return `startDate=${fmt(startDate)}&endDate=${fmt(endDate)}`;
-        } else if (single) {
-            const [y, w] = single.split('-W').map(Number);
+        } else if (singleGiven) {
             const fp = `${y}W${w}`;
             selectedPeriodsForExport = [fp];
             return `period=${fp}`;
@@ -895,6 +987,100 @@ function clearAllItems() {
     reRenderAvailable();
     renderSelectedItems();
 }
+
+// ─── DATA MODE TOGGLE (Data Elements vs Indicators) ───────────────────────
+function switchDataMode(mode) {
+    dataMode = mode;
+    document.getElementById('deModeContainer').style.display  = mode === 'de'  ? 'block' : 'none';
+    document.getElementById('indModeContainer').style.display = mode === 'ind' ? 'block' : 'none';
+    const deTab  = document.getElementById('modeTabDE');
+    const indTab = document.getElementById('modeTabInd');
+    deTab.style.background  = mode === 'de'  ? '#004080' : '#fff';
+    deTab.style.color       = mode === 'de'  ? '#fff'    : '#004080';
+    indTab.style.background = mode === 'ind' ? '#004080' : '#fff';
+    indTab.style.color      = mode === 'ind' ? '#fff'    : '#004080';
+    const downloadBtn = document.getElementById('downloadDatasetsBtn');
+    if (downloadBtn) downloadBtn.textContent = mode === 'ind' ? '⬇ DOWNLOAD INDICATOR DATA (.xlsx)' : '⬇ DOWNLOAD AS EXCEL (.xlsx)';
+}
+
+// ─── INDICATORS: load & pick ────────────────────────────────────────────────
+async function loadIndicatorsList() {
+    const btn = document.querySelector('button[onclick="loadIndicatorsList()"]');
+    const orig = btn.textContent;
+    btn.disabled = true; btn.textContent = 'Loading...';
+    try {
+        log('Fetching indicators from DHIS2...', 'info');
+        showNotification('Loading indicators...', 'info');
+        const url = `${state.config.instanceUrl}/api/indicators.json?fields=id,displayName&paging=false`;
+        const response = await fetchWithAuth(url);
+        if (!response.ok) throw new Error(`Failed to fetch indicators: ${response.status}`);
+        const data = await response.json();
+        allIndicatorsData = (data.indicators || [])
+            .map(i => ({ id: i.id, name: i.displayName || i.id }))
+            .sort((a, b) => a.name.localeCompare(b.name));
+        log(`Loaded ${allIndicatorsData.length} indicators`, 'success');
+        showNotification(`Loaded ${allIndicatorsData.length} indicators`, 'success');
+        renderIndAvailable(); renderIndSelected();
+    } catch (error) {
+        log(`Error: ${error.message}`, 'error');
+        showNotification(`Failed to load indicators: ${error.message}`, 'error');
+    } finally {
+        btn.disabled = false; btn.textContent = orig;
+    }
+}
+
+function renderIndAvailable() {
+    const search  = (document.getElementById('indAvailableSearch').value || '').toLowerCase();
+    const panel   = document.getElementById('indAvailablePanel');
+    const visible = allIndicatorsData.filter(i => !selectedIndicators.has(i.id) && (!search || i.name.toLowerCase().includes(search)));
+    document.getElementById('indAvailableCount').textContent = `${visible.length} items`;
+    if (!visible.length) {
+        panel.innerHTML = `<p style="color:#666;text-align:center;padding:20px;">${allIndicatorsData.length ? 'All added or no match' : 'Click "Load Indicators" to fetch the indicator list...'}</p>`;
+        return;
+    }
+    const frag = document.createDocumentFragment();
+    visible.forEach(i => {
+        const div = document.createElement('div');
+        div.style.cssText = 'padding:7px 10px;margin:2px 0;background:#fff;border:1px solid #ddd;border-radius:4px;cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:space-between;gap:8px;';
+        div.innerHTML = `<span style="flex:1;">${esc(i.name)}</span><button type="button" style="background:#28a745;color:#fff;border:none;padding:3px 10px;border-radius:4px;font-size:11px;font-weight:700;cursor:pointer;font-family:'Oswald',Arial,sans-serif;">+ Add</button>`;
+        div.querySelector('button').onclick = () => addIndicator(i.id);
+        div.ondblclick = () => addIndicator(i.id);
+        frag.appendChild(div);
+    });
+    panel.innerHTML = ''; panel.appendChild(frag);
+}
+
+function renderIndSelected() {
+    const search = (document.getElementById('indSelectedSearch').value || '').toLowerCase();
+    const panel  = document.getElementById('indSelectedPanel');
+    document.getElementById('indSelectedCount').textContent = `${selectedIndicators.size} items`;
+    const items = Array.from(selectedIndicators.entries())
+        .filter(([id, name]) => !search || name.toLowerCase().includes(search))
+        .sort((a, b) => a[1].localeCompare(b[1]));
+    if (!items.length) { panel.innerHTML = '<p style="color:#666;text-align:center;padding:20px;">No indicators selected yet</p>'; return; }
+    const frag = document.createDocumentFragment();
+    items.forEach(([id, name]) => {
+        const div = document.createElement('div');
+        div.style.cssText = 'padding:8px 10px;margin:3px 0;background:#d4edda;border:1px solid #28a745;border-radius:4px;font-size:12px;display:flex;align-items:center;gap:8px;';
+        div.innerHTML = `<span style="flex:1;font-weight:600;">${esc(name)}</span><button type="button" style="background:#dc3545;color:#fff;border:none;width:22px;height:22px;border-radius:50%;cursor:pointer;font-size:14px;line-height:1;flex-shrink:0;">×</button>`;
+        div.querySelector('button').onclick = () => removeIndicator(id);
+        frag.appendChild(div);
+    });
+    panel.innerHTML = ''; panel.appendChild(frag);
+}
+
+function addIndicator(id) {
+    const item = allIndicatorsData.find(i => i.id === id);
+    if (item && !selectedIndicators.has(id)) { selectedIndicators.set(id, item.name); renderIndAvailable(); renderIndSelected(); }
+}
+function removeIndicator(id) { selectedIndicators.delete(id); renderIndAvailable(); renderIndSelected(); }
+function addAllIndicators() {
+    const search = (document.getElementById('indAvailableSearch').value || '').toLowerCase();
+    allIndicatorsData.filter(i => !selectedIndicators.has(i.id) && (!search || i.name.toLowerCase().includes(search)))
+        .forEach(i => selectedIndicators.set(i.id, i.name));
+    renderIndAvailable(); renderIndSelected();
+}
+function clearAllIndicators() { selectedIndicators.clear(); renderIndAvailable(); renderIndSelected(); }
 
 const debouncedFilterAvailable = debounce(filterAvailableItems, 150);
 const debouncedFilterSelected  = debounce(filterSelectedItems,  150);
@@ -1481,9 +1667,12 @@ function resetAllSelections() {
     }
 
     document.getElementById('periodMonth').value  = '';
-    document.getElementById('periodWeek').value   = '';
-    document.getElementById('periodWeekStart').value = '';
-    document.getElementById('periodWeekEnd').value   = '';
+    document.getElementById('weekYear').value      = new Date().getFullYear();
+    document.getElementById('weekStartYear').value = new Date().getFullYear();
+    document.getElementById('weekEndYear').value    = new Date().getFullYear();
+    populateWeekOptions('weekNum');
+    populateWeekOptions('weekStartNum');
+    populateWeekOptions('weekEndNum');
     document.getElementById('periodStart').value  = '';
     document.getElementById('periodEnd').value    = '';
     document.getElementById('quarterYear').value  = '2025';
@@ -1502,6 +1691,7 @@ function resetAllSelections() {
 // ─── DOWNLOAD ────────────────────────────────────────────────────────────────
 
 async function executeDownloadDatasets() {
+    if (dataMode === 'ind') { return executeDownloadIndicators(); }
     const selectedDataElementIds = Array.from(selectedDataElements.keys());
     if (selectedDataElementIds.length === 0) { showNotification('Please select at least one data element', 'error'); return; }
     if (selectedOrgUnits.size === 0)          { showNotification('Please select at least one organisation unit', 'error'); return; }
@@ -1553,6 +1743,28 @@ async function executeDownloadDatasets() {
         log(`Period: ${period}`, 'info');
         log(`Periods to include: ${selectedPeriodsForExport.length}`, 'info');
 
+        // Sanity check: DHIS2 only returns values when the period you query
+        // matches the period type of the dataset the data element belongs to
+        // (e.g. asking for a Weekly period on a Monthly data element always
+        // returns zero — silently, with no error). Warn loudly if that's
+        // what's about to happen.
+        const activeTabEl   = document.querySelector('.period-tab.active');
+        const activeTabName = activeTabEl ? activeTabEl.textContent.trim() : '';
+        const tabToPeriodType = { 'Monthly': 'Monthly', 'Weekly': 'Weekly', 'Quarterly': 'Quarterly', 'Yearly': 'Yearly' };
+        const expectedType = tabToPeriodType[activeTabName];
+        if (expectedType) {
+            const dsPeriodTypes = new Set();
+            selectedDataElements.forEach(info => {
+                const ds = (typeof datasetsData !== 'undefined' ? datasetsData : []).find(d => d.id === info.datasetId);
+                if (ds && ds.periodType) dsPeriodTypes.add(ds.periodType);
+            });
+            const mismatched = Array.from(dsPeriodTypes).filter(t => t !== expectedType);
+            if (mismatched.length > 0) {
+                log(`⚠️ WARNING: you selected "${expectedType}" as the period, but the selected data element(s) belong to dataset(s) with period type ${mismatched.join(', ')}. DHIS2 will return ZERO values for this mismatch. Switch the period tab to match, or re-check which dataset these elements came from.`, 'warning');
+                showNotification(`Period type mismatch: dataset is ${mismatched.join(', ')}, not ${expectedType} — this will return no data`, 'error');
+            }
+        }
+
         // Batch processing
         const orgUnitBatches = [];
         for (let i = 0; i < selectedOrgUnitIds.length; i += ORG_UNIT_BATCH_SIZE)
@@ -1578,7 +1790,12 @@ async function executeDownloadDatasets() {
                     setProgress(Math.round(15 + (batchNum / totalBatches) * 55));
                     log(`Batch ${batchNum}/${totalBatches} (${ouBatch.length} facilities, ${deBatch.length} elements)...`, 'info');
                     const dataUrl  = `${state.config.instanceUrl}/api/dataValueSets.json?dataElement=${deBatch.join(',')}&orgUnit=${ouBatch.join(',')}&${period}`;
-                    const dataResp = await fetchWithAuth(dataUrl);
+                    let dataResp = await fetchWithAuth(dataUrl);
+                    if (!dataResp.ok) {
+                        log(`Batch ${batchNum} got ${dataResp.status}, retrying once...`, 'warning');
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                        dataResp = await fetchWithAuth(dataUrl);
+                    }
                     if (!dataResp.ok) { log(`Batch ${batchNum} failed: ${dataResp.status}`, 'warning'); failedBatches++; continue; }
                     const batchData = await dataResp.json();
                     if (batchData.dataValues && batchData.dataValues.length > 0) {
@@ -1610,10 +1827,35 @@ async function executeDownloadDatasets() {
             });
             log(`Found ${Object.keys(categoryOptionComboMap).length} category combos`, 'info');
         }
-        setProgress(85);
+        setProgress(82);
+
+        // Fetch the full set of category option combos that belong to EACH
+        // selected data element, so every combo gets its own column even when
+        // no value at all was returned for it (a data element with no data
+        // would otherwise disappear from the export entirely).
+        log('Fetching category combos for each selected data element...', 'info');
+        const deCocMap = {};
+        const cocFetchBatchSize = 100;
+        for (let i = 0; i < selectedDataElementIds.length; i += cocFetchBatchSize) {
+            const batch = selectedDataElementIds.slice(i, i + cocFetchBatchSize).join(',');
+            try {
+                const r = await fetchWithAuth(`${state.config.instanceUrl}/api/dataElements.json?filter=id:in:[${batch}]&fields=id,categoryCombo[categoryOptionCombos[id,displayName]]&paging=false`);
+                if (r.ok) {
+                    const d = await r.json();
+                    (d.dataElements || []).forEach(de => {
+                        const cocs = (de.categoryCombo && de.categoryCombo.categoryOptionCombos) || [];
+                        deCocMap[de.id] = cocs.length
+                            ? cocs.map(c => ({ id: c.id, name: c.displayName || c.id }))
+                            : [{ id: 'default', name: 'default' }];
+                    });
+                }
+            } catch (e) { log(`  Could not fetch combos for a batch: ${e.message}`, 'warning'); }
+        }
+        log(`Category combos mapped for ${Object.keys(deCocMap).length} data elements`, 'success');
+        setProgress(88);
 
         log('Building Excel workbook...', 'info');
-        exportToExcel(allDataValues, dataElementMap, orgUnitMap, categoryOptionComboMap, orgUnitHierarchy, selectedOrgUnitIds, periodsArray);
+        exportToExcel(allDataValues, dataElementMap, orgUnitMap, categoryOptionComboMap, deCocMap, orgUnitHierarchy, selectedOrgUnitIds, periodsArray);
         setProgress(100);
 
         log('═══════════════════════════════════════', 'success');
@@ -1654,7 +1896,214 @@ function getOrgUnitHierarchy(orgUnitId, orgUnitHierarchy) {
     return hierarchy;
 }
 
-function exportToExcel(dataValues, dataElementMap, orgUnitMap, categoryOptionComboMap, orgUnitHierarchy, selectedOrgUnitIds, periodsArray) {
+// ─── INDICATOR DOWNLOAD (via analytics engine — indicators are calculated,
+// not stored raw, so they must be read through /api/analytics.json rather
+// than /api/dataValueSets.json) ─────────────────────────────────────────────
+async function executeDownloadIndicators() {
+    const selectedIndIds = Array.from(selectedIndicators.keys());
+    if (selectedIndIds.length === 0) { showNotification('Please select at least one indicator', 'error'); return; }
+    if (selectedOrgUnits.size === 0)  { showNotification('Please select at least one organisation unit', 'error'); return; }
+
+    const downloadBtn = document.getElementById('downloadDatasetsBtn');
+    if (downloadBtn) { downloadBtn.disabled = true; downloadBtn.textContent = 'Processing...'; }
+    showProgress();
+    clearLogs();
+    setProgress(0);
+
+    try {
+        log(`Processing ${selectedIndIds.length} selected indicator(s)...`, 'info');
+        setProgress(5);
+
+        log(`Selected ${selectedOrgUnits.size} organisation unit(s)...`, 'info');
+        selectedOrgUnits.forEach(ouId => {
+            const ou = orgUnitsData.find(o => o.id === ouId);
+            if (ou) log(`  - ${ou.displayName} (Level ${ou.level})`, 'info');
+        });
+
+        const selectedOrgUnitIds = expandSelectionToFacilities();
+        log(`Expanded to ${selectedOrgUnitIds.length} unique health facilities at Level ${facilityLevel}`, 'success');
+        setProgress(10);
+
+        if (selectedOrgUnitIds.length === 0) {
+            showNotification('No health facilities found under selected organisation units', 'error');
+            if (downloadBtn) { downloadBtn.disabled = false; downloadBtn.textContent = '⬇ DOWNLOAD INDICATOR DATA (.xlsx)'; }
+            return;
+        }
+
+        const indicatorNameMap = {};
+        selectedIndicators.forEach((name, id) => { indicatorNameMap[id] = name; });
+
+        const orgUnitMap       = {};
+        const orgUnitHierarchy = {};
+        const hierarchySource  = allOrgUnitsData.length > 0 ? allOrgUnitsData : orgUnitsData;
+        hierarchySource.forEach(ou => {
+            orgUnitMap[ou.id]       = ou.displayName;
+            orgUnitHierarchy[ou.id] = { id: ou.id, name: ou.displayName, level: ou.level, parent: ou.parent ? ou.parent.id : null };
+        });
+
+        getPeriodFromForm(); // populates selectedPeriodsForExport as a side effect
+        const periodsArray = selectedPeriodsForExport.length > 0 ? selectedPeriodsForExport : [];
+        if (periodsArray.length === 0) {
+            showNotification('Please select a period', 'error');
+            if (downloadBtn) { downloadBtn.disabled = false; downloadBtn.textContent = '⬇ DOWNLOAD INDICATOR DATA (.xlsx)'; }
+            return;
+        }
+        log(`Periods to include: ${periodsArray.length} (${periodsArray.join(', ')})`, 'info');
+
+        // Batch org units and indicators for the analytics query
+        const orgUnitBatches = [];
+        for (let i = 0; i < selectedOrgUnitIds.length; i += ORG_UNIT_BATCH_SIZE)
+            orgUnitBatches.push(selectedOrgUnitIds.slice(i, i + ORG_UNIT_BATCH_SIZE));
+
+        const IND_BATCH_SIZE = 50;
+        const indBatches = [];
+        for (let i = 0; i < selectedIndIds.length; i += IND_BATCH_SIZE)
+            indBatches.push(selectedIndIds.slice(i, i + IND_BATCH_SIZE));
+
+        const totalBatches = orgUnitBatches.length * indBatches.length;
+        log(`Splitting into ${totalBatches} analytics batch requests...`, 'info');
+
+        let allRows = []; // {dataElement: indicatorId, orgUnit, period, value}
+        let completedBatches = 0, failedBatches = 0;
+
+        for (let ouBatchIndex = 0; ouBatchIndex < orgUnitBatches.length; ouBatchIndex++) {
+            const ouBatch = orgUnitBatches[ouBatchIndex];
+            for (let indBatchIndex = 0; indBatchIndex < indBatches.length; indBatchIndex++) {
+                const indBatch = indBatches[indBatchIndex];
+                try {
+                    const batchNum = ouBatchIndex * indBatches.length + indBatchIndex + 1;
+                    setProgress(Math.round(15 + (batchNum / totalBatches) * 55));
+                    log(`Batch ${batchNum}/${totalBatches} (${ouBatch.length} facilities, ${indBatch.length} indicators)...`, 'info');
+                    const dxParam  = indBatch.join(';');
+                    const ouParam  = ouBatch.join(';');
+                    const peParam  = periodsArray.join(';');
+                    const dataUrl  = `${state.config.instanceUrl}/api/analytics.json?dimension=dx:${dxParam}&dimension=ou:${ouParam}&dimension=pe:${peParam}&displayProperty=NAME&skipMeta=true&ignoreLimit=true`;
+                    let dataResp = await fetchWithAuth(dataUrl);
+                    if (!dataResp.ok) {
+                        log(`Batch ${batchNum} got ${dataResp.status}, retrying once...`, 'warning');
+                        await new Promise(r => setTimeout(r, 500));
+                        dataResp = await fetchWithAuth(dataUrl);
+                    }
+                    if (!dataResp.ok) { log(`Batch ${batchNum} failed: ${dataResp.status}`, 'warning'); failedBatches++; continue; }
+                    const batchData = await dataResp.json();
+                    const headers = (batchData.headers || []).map(h => h.name);
+                    const dxIdx  = headers.indexOf('dx');
+                    const ouIdx  = headers.indexOf('ou');
+                    const peIdx  = headers.indexOf('pe');
+                    const valIdx = headers.indexOf('value');
+                    (batchData.rows || []).forEach(r => {
+                        allRows.push({ dataElement: r[dxIdx], orgUnit: r[ouIdx], period: r[peIdx], value: r[valIdx] });
+                    });
+                    if (batchData.rows && batchData.rows.length) log(`  Retrieved ${batchData.rows.length} values`, 'success');
+                    completedBatches++;
+                    if (batchNum < totalBatches) await new Promise(r => setTimeout(r, 100));
+                } catch (batchError) {
+                    log(`Batch failed: ${batchError.message}`, 'warning');
+                    failedBatches++;
+                }
+            }
+        }
+
+        log(`Retrieved ${allRows.length} total indicator values from ${completedBatches} batches`, 'success');
+        setProgress(80);
+
+        log('Building Excel workbook...', 'info');
+        exportIndicatorsToExcel(allRows, indicatorNameMap, orgUnitMap, orgUnitHierarchy, selectedOrgUnitIds, periodsArray);
+        setProgress(100);
+
+        log('═══════════════════════════════════════', 'success');
+        log('DOWNLOAD COMPLETE!', 'success');
+        log(`  ${allRows.length} indicator values exported`, 'success');
+        log(`  ${selectedIndIds.length} indicators`, 'success');
+        log(`  ${selectedOrgUnitIds.length} unique health facilities`, 'success');
+        log(`  ${periodsArray.length} periods included`, 'success');
+        log('═══════════════════════════════════════', 'success');
+        showNotification('Excel file downloaded successfully!', 'success');
+
+    } catch (error) {
+        log(`ERROR: ${error.message}`, 'error');
+        showNotification(`Error: ${error.message}`, 'error');
+    } finally {
+        if (downloadBtn) { downloadBtn.disabled = false; downloadBtn.textContent = '⬇ DOWNLOAD INDICATOR DATA (.xlsx)'; }
+    }
+}
+
+function exportIndicatorsToExcel(rows, indicatorNameMap, orgUnitMap, orgUnitHierarchy, selectedOrgUnitIds, periodsArray) {
+    log(`Building wide-format Excel: ${selectedOrgUnitIds.length} facilities × ${periodsArray.length} periods...`, 'info');
+
+    const rawNames = {};
+    selectedOrgUnitIds.forEach(ouId => { rawNames[ouId] = orgUnitMap[ouId] || ouId; });
+    const nameCounts = {};
+    Object.values(rawNames).forEach(n => { nameCounts[n] = (nameCounts[n] || 0) + 1; });
+    const displayNames = {};
+    selectedOrgUnitIds.forEach(ouId => {
+        const raw = rawNames[ouId];
+        if (nameCounts[raw] > 1) {
+            const parentName = getAncestorAtLevel(ouId, facilityLevel - 1, orgUnitHierarchy);
+            displayNames[ouId] = parentName ? `${raw} (${parentName})` : raw;
+        } else {
+            displayNames[ouId] = raw;
+        }
+    });
+
+    const grouped = {};
+    rows.forEach(r => {
+        const key = `${r.orgUnit}|${r.period}`;
+        if (!grouped[key]) grouped[key] = {};
+        const indName = indicatorNameMap[r.dataElement] || r.dataElement;
+        grouped[key][indName] = r.value;
+    });
+
+    const sortedCols = Object.values(indicatorNameMap).sort();
+
+    const maxLevel = facilityLevel;
+    const hierarchyHeaders = [];
+    for (let i = 1; i <= maxLevel; i++) hierarchyHeaders.push(`Level ${i}`);
+    const headers = [...hierarchyHeaders, 'Facility', 'Period', ...sortedCols];
+
+    const rowsOut = [];
+    selectedOrgUnitIds.forEach(ouId => {
+        periodsArray.forEach(period => {
+            const key      = `${ouId}|${period}`;
+            const rowData  = grouped[key] || {};
+            const hierarchy = getOrgUnitHierarchy(ouId, orgUnitHierarchy);
+            const row = [];
+            for (let i = 0; i < maxLevel; i++) row.push(hierarchy[i] || '');
+            row.push(displayNames[ouId]);
+            row.push(period);
+            sortedCols.forEach(col => {
+                const val = rowData[col];
+                if (val !== undefined && val !== '' && !isNaN(Number(val))) row.push(Number(val));
+                else row.push(val !== undefined ? val : '');
+            });
+            rowsOut.push(row);
+        });
+    });
+
+    log(`Generated ${rowsOut.length} rows, ${sortedCols.length} indicator columns`, 'info');
+
+    const wb     = XLSX.utils.book_new();
+    const wsData = [headers, ...rowsOut];
+    const ws     = XLSX.utils.aoa_to_sheet(wsData);
+    const colWidths = headers.map((h, i) => {
+        if (i < maxLevel)       return { wch: 25 };
+        if (i === maxLevel)     return { wch: 35 };
+        if (i === maxLevel + 1) return { wch: 12 };
+        return { wch: Math.max(h.length + 2, 15) };
+    });
+    ws['!cols'] = colWidths;
+    XLSX.utils.book_append_sheet(wb, ws, 'Indicator Export');
+
+    const filename = `indicator-export-${new Date().toISOString().split('T')[0]}.xlsx`;
+    XLSX.writeFile(wb, filename);
+    log(`Excel file "${filename}" saved.`, 'success');
+}
+
+function buildColName(deName, cocName) {
+    return (cocName && cocName.toLowerCase() !== 'default') ? `${deName} (${cocName})` : deName;
+}
+
+function exportToExcel(dataValues, dataElementMap, orgUnitMap, categoryOptionComboMap, deCocMap, orgUnitHierarchy, selectedOrgUnitIds, periodsArray) {
     log(`Building wide-format Excel: ${selectedOrgUnitIds.length} facilities × ${periodsArray.length} periods...`, 'info');
 
     // ── Disambiguate facilities that share the same display name ──────────────
@@ -1701,15 +2150,20 @@ function exportToExcel(dataValues, dataElementMap, orgUnitMap, categoryOptionCom
         if (!grouped[key]) grouped[key] = {};
         const deName  = dataElementMap[dv.dataElement] || dv.dataElement;
         const cocName = categoryOptionComboMap[dv.categoryOptionCombo] || '';
-        const colName = (cocName && cocName.toLowerCase() !== 'default')
-            ? `${deName} (${cocName})` : deName;
+        const colName = buildColName(deName, cocName);
         grouped[key][colName] = dv.value;
     });
 
-    // Collect all column names
+    // Build the full expected column list — one column per data element, or
+    // one per category option combo when the element has more than one —
+    // regardless of whether any value was actually returned for it. This is
+    // what keeps a data element with zero data from disappearing entirely.
     const allCols = new Set();
-    Object.values(grouped).forEach(row => Object.keys(row).forEach(c => allCols.add(c)));
-    if (allCols.size === 0) Object.values(dataElementMap).forEach(n => allCols.add(n));
+    Object.keys(dataElementMap).forEach(deId => {
+        const deName = dataElementMap[deId];
+        const cocs   = (deCocMap && deCocMap[deId] && deCocMap[deId].length) ? deCocMap[deId] : [{ id: 'default', name: 'default' }];
+        cocs.forEach(coc => allCols.add(buildColName(deName, coc.name)));
+    });
     const sortedCols = Array.from(allCols).sort();
 
     // Hierarchy header columns (Level 1 … Level N)
