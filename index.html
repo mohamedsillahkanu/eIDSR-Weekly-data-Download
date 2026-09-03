@@ -315,6 +315,7 @@
                     <label class="form-label">Select Period Type</label>
                     <div class="period-type-tabs">
                         <div class="period-tab active" onclick="selectPeriodType('monthly')">Monthly</div>
+                        <div class="period-tab" onclick="selectPeriodType('weekly')">Weekly</div>
                         <div class="period-tab" onclick="selectPeriodType('range')">Date Range</div>
                         <div class="period-tab" onclick="selectPeriodType('quarterly')">Quarterly</div>
                         <div class="period-tab" onclick="selectPeriodType('yearly')">Yearly</div>
@@ -323,6 +324,24 @@
                         <div class="form-group">
                             <label class="form-label">Year-Month</label>
                             <input type="month" class="form-input" name="period" id="periodMonth">
+                        </div>
+                    </div>
+                    <div class="period-inputs" id="weekly-inputs">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">Year-Week</label>
+                                <input type="week" class="form-input" name="periodWeek" id="periodWeek">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">Or Start Week (range)</label>
+                                <input type="week" class="form-input" name="periodWeekStart" id="periodWeekStart">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">End Week (range)</label>
+                                <input type="week" class="form-input" name="periodWeekEnd" id="periodWeekEnd">
+                            </div>
                         </div>
                     </div>
                     <div class="period-inputs" id="range-inputs">
@@ -547,6 +566,38 @@ function generateMonthlyPeriods(startYearMonth, endYearMonth) {
     return periods;
 }
 
+function isoWeekToDate(year, week) {
+    const simple = new Date(Date.UTC(year, 0, 1 + (week - 1) * 7));
+    const dayOfWeek = simple.getUTCDay() || 7;
+    if (dayOfWeek <= 4) simple.setUTCDate(simple.getUTCDate() - dayOfWeek + 1);
+    else simple.setUTCDate(simple.getUTCDate() + 8 - dayOfWeek);
+    return simple;
+}
+
+function dateToISOWeek(date) {
+    const d = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+    d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+    const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+    return { year: d.getUTCFullYear(), week: weekNo };
+}
+
+function generateWeeklyPeriods(startWeekVal, endWeekVal) {
+    const periods = [];
+    const [sy, sw] = startWeekVal.split('-W').map(Number);
+    const [ey, ew] = endWeekVal.split('-W').map(Number);
+    let cur = isoWeekToDate(sy, sw);
+    const endDate = isoWeekToDate(ey, ew);
+    let guard = 0;
+    while (cur <= endDate && guard < 1000) {
+        const { year, week } = dateToISOWeek(cur);
+        periods.push(`${year}W${week}`);
+        cur.setUTCDate(cur.getUTCDate() + 7);
+        guard++;
+    }
+    return periods;
+}
+
 function generateYearlyPeriods(startYear, endYear) {
     const periods = [];
     for (let y = startYear; y <= endYear; y++) periods.push(String(y));
@@ -562,6 +613,25 @@ function getPeriodFromForm() {
     if (tabText === 'monthly') {
         const period = document.querySelector('#monthly-inputs input[name="period"]')?.value;
         if (period) { const fp = period.replace('-', ''); selectedPeriodsForExport = [fp]; return `period=${fp}`; }
+    } else if (tabText === 'weekly') {
+        const single = document.querySelector('#weekly-inputs input[name="periodWeek"]')?.value;
+        const wStart = document.querySelector('#weekly-inputs input[name="periodWeekStart"]')?.value;
+        const wEnd   = document.querySelector('#weekly-inputs input[name="periodWeekEnd"]')?.value;
+        if (wStart && wEnd) {
+            selectedPeriodsForExport = generateWeeklyPeriods(wStart, wEnd);
+            const [sy, sw] = wStart.split('-W').map(Number);
+            const [ey, ew] = wEnd.split('-W').map(Number);
+            const startDate = isoWeekToDate(sy, sw);
+            const endDate   = isoWeekToDate(ey, ew);
+            endDate.setUTCDate(endDate.getUTCDate() + 6);
+            const fmt = d => `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`;
+            return `startDate=${fmt(startDate)}&endDate=${fmt(endDate)}`;
+        } else if (single) {
+            const [y, w] = single.split('-W').map(Number);
+            const fp = `${y}W${w}`;
+            selectedPeriodsForExport = [fp];
+            return `period=${fp}`;
+        }
     } else if (tabText === 'date range') {
         const start = document.querySelector('#range-inputs input[name="periodStart"]')?.value;
         const end   = document.querySelector('#range-inputs input[name="periodEnd"]')?.value;
@@ -1411,6 +1481,9 @@ function resetAllSelections() {
     }
 
     document.getElementById('periodMonth').value  = '';
+    document.getElementById('periodWeek').value   = '';
+    document.getElementById('periodWeekStart').value = '';
+    document.getElementById('periodWeekEnd').value   = '';
     document.getElementById('periodStart').value  = '';
     document.getElementById('periodEnd').value    = '';
     document.getElementById('quarterYear').value  = '2025';
