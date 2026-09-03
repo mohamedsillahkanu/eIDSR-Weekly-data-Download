@@ -461,7 +461,7 @@ html,body{width:100%;min-height:100vh;font-family:'Segoe UI',Roboto,Arial,sans-s
 //  CONSTANTS
 // ═══════════════════════════════════════════════════════════════
 const PROXY    = 'https://script.google.com/macros/s/AKfycbyRXc68PYSmDSCYPakAS8Gc9R00kRjmsMYoDujPYMItyquXfwMAJUtRqXLiDlNWbSfDQQ/exec';
-const BASE_URL = 'https://sl.dhis2.org/hmis23';
+const BASE_URL = 'https://sl.dhis2.org/hmis';
 const AUTH     = 'Basic ' + btoa('musa-sillahkanu:Navigator/2024!');
 const L_PHU=5, L_DIST=2, L_CHIEF=4;
 
@@ -762,6 +762,37 @@ async function testConnection(){
       log('\nTest D skipped — no Start/End Week entered yet.');
     }
   }catch(e){log(`✗ Test D failed: ${e.message}`);}
+
+  // 8) Name-based search — if the UIDs above don't exist on this instance at all,
+  //    search by NAME instead to see whether the same indicators exist under different
+  //    UIDs (e.g. the metadata sheet was exported from a different DHIS2 environment).
+  try{
+    log(`\nTest E — searching dataElements by NAME for "EIDSR" (in case the UIDs above are from a different DHIS2 instance)`);
+    const r=await dhis2(`/api/dataElements.json?filter=name:ilike:EIDSR&fields=id,displayName,categoryCombo[id,displayName]&paging=false&pageSize=200`);
+    log(`  → ${r.dataElements.length} data element(s) with "EIDSR" in the name found on this instance.`);
+    r.dataElements.slice(0,40).forEach(d=>log(`     - ${d.displayName}  →  id=${d.id}  ·  categoryCombo=${d.categoryCombo?.displayName} (${d.categoryCombo?.id})`));
+    if(r.dataElements.length===0){
+      log('  → Nothing at all matches "EIDSR" by name either on this instance/path. Worth double-checking the base URL/path this tool points to.');
+    }else{
+      log('  → If any of the names above match what you expect, copy their real "id=" value — the tool\'s DE_CLINICAL / DE_POSITIVE / DE_TYPHOID constants need updating to these, not the ones from the metadata sheet.');
+    }
+  }catch(e){log(`✗ Test E failed: ${e.message}`);}
+
+  // 9) Name-based search for the dataset itself
+  try{
+    log(`\nTest F — searching datasets by NAME for "IDSR"`);
+    const r=await dhis2(`/api/dataSets.json?filter=name:ilike:IDSR&fields=id,displayName,periodType&paging=false`);
+    log(`  → ${r.dataSets.length} dataset(s) with "IDSR" in the name found on this instance.`);
+    r.dataSets.forEach(d=>log(`     - ${d.displayName}  →  id=${d.id}  ·  periodType=${d.periodType}`));
+  }catch(e){log(`✗ Test F failed: ${e.message}`);}
+
+  // 10) Name-based search for the category option combos (age group breakdown)
+  try{
+    log(`\nTest G — searching categoryOptionCombos by NAME for "years old"`);
+    const r=await dhis2(`/api/categoryOptionCombos.json?filter=name:ilike:years old&fields=id,displayName&paging=false&pageSize=200`);
+    log(`  → ${r.categoryOptionCombos.length} categoryOptionCombo(s) with "years old" in the name found on this instance.`);
+    r.categoryOptionCombos.slice(0,40).forEach(c=>log(`     - ${c.displayName}  →  id=${c.id}`));
+  }catch(e){log(`✗ Test G failed: ${e.message}`);}
 
   log('\nDone. Copy this panel\'s text if you need help interpreting it.');
 
@@ -1418,7 +1449,7 @@ function downloadR(){
 
 library(httr); library(dplyr)
 
-BASE_URL <- "https://sl.dhis2.org/hmis23"
+BASE_URL <- "https://sl.dhis2.org/hmis"
 USERNAME <- "your_username"; PASSWORD <- "your_password"
 auth <- authenticate(USERNAME, PASSWORD)
 
@@ -1469,7 +1500,7 @@ function downloadPy(){
 import requests, pandas as pd, numpy as np, itertools
 from requests.auth import HTTPBasicAuth
 
-BASE_URL = "https://sl.dhis2.org/hmis23"
+BASE_URL = "https://sl.dhis2.org/hmis"
 USERNAME = "your_username"; PASSWORD = "your_password"
 auth = HTTPBasicAuth(USERNAME, PASSWORD)
 
