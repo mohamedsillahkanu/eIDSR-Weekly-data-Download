@@ -1,0 +1,1748 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DHIS2 Dataset Download</title>
+    <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { margin: 0; padding: 0; background-color: #f0f4f8; font-family: 'Oswald', Arial, sans-serif; color: #000000; font-weight: 500; min-height: 100vh; }
+        .logo-box { background: #f8f9fa; border-radius: 8px; padding: 10px; display: flex; align-items: center; justify-content: center; border: 2px solid #004080; }
+        .logo-box img { width: 80px; height: auto; border-radius: 6px; }
+        .login-screen { display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; background: linear-gradient(135deg, #004080 0%, #0066cc 100%); }
+        .login-card { background: #ffffff; border-radius: 12px; padding: 40px; max-width: 450px; width: 100%; box-shadow: 0 8px 32px rgba(0,0,0,0.2); border: 4px double #004080; }
+        .logo-container { display: flex; justify-content: center; gap: 20px; margin-bottom: 25px; }
+        .login-header { text-align: center; margin-bottom: 30px; }
+        .login-header h1 { color: #004080; font-size: 24px; font-weight: 700; margin-bottom: 8px; letter-spacing: 1px; }
+        .login-header p { color: #666; font-size: 14px; font-weight: 500; }
+        .readonly-input { background: #e9ecef !important; color: #495057 !important; cursor: not-allowed; }
+        .form-group { margin-bottom: 20px; }
+        .form-label { display: block; color: #004080; font-size: 14px; font-weight: 700; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .form-input, .form-select { width: 100%; padding: 12px 15px; border: 2px solid #004080; border-radius: 6px; font-size: 14px; font-family: 'Oswald', Arial, sans-serif; font-weight: 500; color: #000; background: #ffffff; transition: all 0.3s; }
+        .form-input:focus, .form-select:focus { outline: none; border-color: #0056b3; box-shadow: 0 0 0 3px rgba(0,64,128,0.1); }
+        .form-input::placeholder { color: #999; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .btn-primary { width: 100%; padding: 14px 24px; background: #004080; color: #ffffff; border: 2px solid #004080; border-radius: 6px; font-size: 14px; font-weight: 700; cursor: pointer; text-transform: uppercase; letter-spacing: 0.5px; font-family: 'Oswald', Arial, sans-serif; transition: all 0.3s; }
+        .btn-primary:hover { background: #0056b3; border-color: #0056b3; }
+        .btn-primary:disabled { background: #6c757d; border-color: #6c757d; cursor: wait; opacity: 0.9; }
+        .btn-primary:disabled::after { content: ''; display: inline-block; width: 14px; height: 14px; margin-left: 8px; border: 2px solid #ffffff; border-top-color: transparent; border-radius: 50%; animation: spin 1s linear infinite; }
+        .btn-secondary { padding: 12px 20px; background: #ffffff; color: #004080; border: 2px solid #004080; border-radius: 6px; font-size: 13px; font-weight: 700; cursor: pointer; text-transform: uppercase; font-family: 'Oswald', Arial, sans-serif; transition: all 0.3s; }
+        .btn-secondary:hover { background: #004080; color: #ffffff; }
+        .btn-secondary:disabled { background: #e9ecef; color: #004080; cursor: wait; }
+        .btn-secondary:disabled::after { content: ''; display: inline-block; width: 12px; height: 12px; margin-left: 8px; border: 2px solid #004080; border-top-color: transparent; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .btn-gold { padding: 14px 24px; background: #ffc107; color: #000000; border: 2px solid #ffc107; border-radius: 6px; font-size: 14px; font-weight: 700; cursor: pointer; text-transform: uppercase; font-family: 'Oswald', Arial, sans-serif; transition: all 0.3s; }
+        .btn-gold:hover { background: #e0a800; border-color: #e0a800; }
+        .btn-gold:disabled { background: #e9ecef; color: #666; border-color: #ccc; cursor: wait; }
+        .btn-gold:disabled::after { content: ''; display: inline-block; width: 14px; height: 14px; margin-left: 8px; border: 2px solid #666; border-top-color: transparent; border-radius: 50%; animation: spin 1s linear infinite; }
+        .btn-reset { padding: 14px 30px; background: #ffffff; color: #dc3545; border: 2px solid #dc3545; border-radius: 6px; font-size: 14px; font-weight: 700; cursor: pointer; text-transform: uppercase; font-family: 'Oswald', Arial, sans-serif; transition: all 0.3s; }
+        .btn-reset:hover { background: #dc3545; color: #ffffff; }
+        .main-content { display: none; padding: 20px; }
+        .main-content.active { display: block; }
+        .page-container { width: 100%; max-width: 1400px; margin: 0 auto; }
+        .page-header { background-color: #004080; color: #ffffff; padding: 25px 30px; text-align: center; margin-bottom: 15px; border-radius: 8px 8px 0 0; }
+        .logo-row { display: flex; justify-content: center; align-items: center; gap: 30px; margin-bottom: 15px; }
+        .page-header .logo-box { background: #ffffff; border: none; }
+        .page-header h3 { margin: 12px 0 5px; font-size: 14px; font-weight: 700; letter-spacing: 1px; color: #ffffff; }
+        .page-header .tagline { margin: 0; font-size: 10px; font-weight: 500; color: #ffffff; }
+        .page-header h1 { margin: 20px 0 10px; font-size: 24px; font-weight: 700; color: #ffffff; letter-spacing: 1px; }
+        .page-header .subtitle { font-size: 14px; color: #ffffff; font-weight: 500; }
+        .content-card { border: 4px double #004080; border-radius: 12px; padding: 12px; background-color: #ffffff; box-shadow: 0 4px 12px rgba(0,0,0,0.1); margin-bottom: 15px; }
+        .content-inner { padding: 25px; }
+        .section-header { background-color: #004080; color: #ffffff; padding: 15px 20px; margin-bottom: 20px; border-radius: 6px; display: flex; align-items: center; gap: 15px; }
+        .section-icon { background: #ffffff; color: #004080; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 700; flex-shrink: 0; }
+        .section-title { font-size: 16px; font-weight: 700; letter-spacing: 0.5px; }
+        .dual-panel-container { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 15px; }
+        .panel { background: #f8f9fa; border: 2px solid #004080; border-radius: 8px; overflow: hidden; }
+        .panel-header { background: #004080; color: white; padding: 12px 15px; }
+        .panel-title { font-size: 14px; font-weight: 700; display: flex; justify-content: space-between; align-items: center; }
+        .panel-count { background: #ffffff; color: #004080; padding: 2px 10px; border-radius: 12px; font-size: 11px; }
+        .panel-action-btn { width: 100%; padding: 10px; border: none; font-family: 'Oswald', Arial, sans-serif; font-weight: 600; font-size: 13px; cursor: pointer; transition: all 0.3s; }
+        .load-btn { background: #ffc107; color: #000; }
+        .load-btn:hover { background: #e0a800; }
+        .add-all-btn { background: #28a745; color: white; }
+        .add-all-btn:hover { background: #218838; }
+        .clear-all-btn { background: #dc3545; color: white; }
+        .clear-all-btn:hover { background: #c82333; }
+        .search-box { width: 100%; padding: 10px 15px; border: none; border-bottom: 2px solid #004080; font-family: 'Oswald', Arial, sans-serif; font-size: 13px; }
+        .search-box:focus { outline: none; background: #e7f3ff; }
+        .panel-content { max-height: 350px; overflow-y: auto; padding: 10px; }
+        .dataset-item { padding: 10px 12px; margin: 4px 0; background: #004080; color: white; border-radius: 4px; cursor: pointer; font-size: 13px; display: flex; align-items: center; gap: 8px; }
+        .dataset-item:hover { background: #0056b3; }
+        .item-toggle { width: 20px; text-align: center; font-weight: bold; }
+        .item-name { flex: 1; }
+        .data-elements-container { display: none; margin-left: 15px; border-left: 2px solid #004080; padding-left: 10px; }
+        .data-elements-container.expanded { display: block; }
+        .data-element-item { padding: 8px 12px; margin: 4px 0; background: white; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; font-size: 12px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+        .data-element-item:hover { background: #e7f3ff; border-color: #004080; }
+        .add-btn { background: #28a745; color: white; border: none; padding: 4px 10px; border-radius: 4px; font-size: 11px; cursor: pointer; font-family: 'Oswald', Arial, sans-serif; }
+        .add-btn:hover { background: #218838; }
+        .selected-item { padding: 8px 12px; margin: 4px 0; background: #d4edda; border: 1px solid #28a745; border-radius: 4px; font-size: 12px; display: flex; align-items: center; justify-content: space-between; }
+        .remove-btn { background: #dc3545; color: white; border: none; width: 24px; height: 24px; border-radius: 50%; cursor: pointer; font-size: 14px; line-height: 1; }
+        .remove-btn:hover { background: #c82333; }
+        .org-unit-tree { background: #f8f9fa; border: 2px solid #004080; border-radius: 8px; padding: 15px; max-height: 350px; overflow-y: auto; margin-bottom: 15px; }
+        .facility-level-selector { background: #fff3cd; border: 2px solid #ffc107; border-radius: 6px; padding: 15px; margin-bottom: 15px; display: none; }
+        .facility-level-selector.active { display: block; }
+        .facility-level-selector .selector-row { display: flex; align-items: center; gap: 15px; flex-wrap: wrap; }
+        .facility-level-selector label { font-weight: 700; color: #856404; white-space: nowrap; }
+        .facility-level-selector select { padding: 8px 15px; border: 2px solid #004080; border-radius: 4px; font-family: 'Oswald', Arial, sans-serif; font-size: 13px; min-width: 250px; }
+        .facility-level-selector .info-text { font-size: 12px; color: #856404; margin-top: 10px; padding: 8px; background: #ffeeba; border-radius: 4px; }
+        .org-unit-item { padding: 6px 10px; margin: 2px 0; border-radius: 4px; display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer; background: #ffffff; border: 1px solid #ddd; }
+        .org-unit-item:hover { background: #e7f3ff; border-color: #004080; }
+        .org-unit-item.selected { background: #d4edda; border-color: #28a745; }
+        .org-unit-item .org-unit-checkbox { accent-color: #004080; cursor: pointer; }
+        .org-unit-item.facility-level { border-left: 3px solid #28a745; }
+        .org-unit-item .level-badge { background: #004080; color: white; padding: 1px 6px; border-radius: 3px; font-size: 10px; margin-right: 5px; }
+        .org-unit-item.facility-level .level-badge { background: #28a745; }
+        .org-unit-toggle { width: 20px; text-align: center; font-weight: bold; color: #004080; cursor: pointer; }
+        .org-unit-label { flex: 1; }
+        .org-unit-children { margin-left: 25px; display: none; }
+        .org-unit-children.expanded { display: block; }
+        .control-buttons { display: flex; gap: 10px; flex-wrap: wrap; }
+        .control-btn { padding: 8px 16px; border: 2px solid #004080; border-radius: 4px; font-family: 'Oswald', Arial, sans-serif; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.3s; background: white; color: #004080; }
+        .control-btn:hover { background: #004080; color: white; }
+        .control-btn.expand { border-color: #17a2b8; color: #17a2b8; }
+        .control-btn.expand:hover { background: #17a2b8; color: white; }
+        .control-btn.select-all { border-color: #28a745; color: #28a745; }
+        .control-btn.select-all:hover { background: #28a745; color: white; }
+        .control-btn.clear { border-color: #dc3545; color: #dc3545; }
+        .control-btn.clear:hover { background: #dc3545; color: white; }
+        .period-selector { background: #f8f9fa; border: 2px solid #004080; border-radius: 8px; padding: 20px; margin: 20px 0; }
+        .period-type-tabs { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+        .period-tab { padding: 10px 20px; background: white; border: 2px solid #004080; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; transition: all 0.3s; }
+        .period-tab:hover { background: #e7f3ff; }
+        .period-tab.active { background: #004080; color: white; }
+        .period-inputs { display: none; }
+        .period-inputs.active { display: block; }
+        .progress-section { display: none; background: #f8f9fa; border: 2px solid #004080; border-radius: 8px; padding: 20px; margin: 20px 0; }
+        .progress-section.active { display: block; }
+        .progress-bar { height: 25px; background: #e9ecef; border-radius: 6px; overflow: hidden; border: 2px solid #004080; }
+        .progress-fill { height: 100%; background: linear-gradient(90deg, #004080, #0066cc); transition: width 0.3s; display: flex; align-items: center; justify-content: center; color: white; font-size: 12px; font-weight: 700; }
+        .log-container { margin-top: 15px; max-height: 200px; overflow-y: auto; background: #1a1a2e; border-radius: 6px; padding: 15px; font-family: 'Courier New', monospace; font-size: 12px; }
+        .log-entry { padding: 4px 0; border-bottom: 1px solid #333; }
+        .log-entry.info { color: #17a2b8; }
+        .log-entry.success { color: #28a745; }
+        .log-entry.error { color: #dc3545; }
+        .log-entry.warning { color: #ffc107; }
+        .notification { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); padding: 15px 30px; border-radius: 8px; font-weight: 600; z-index: 2000; display: none; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+        .notification.success { background: #d4edda; color: #155724; border: 2px solid #28a745; display: block; }
+        .notification.error { background: #f8d7da; color: #721c24; border: 2px solid #dc3545; display: block; }
+        .notification.info { background: #e7f3ff; color: #004080; border: 2px solid #004080; display: block; }
+        .page-footer { background-color: #004080; color: #ffffff; padding: 20px 30px; text-align: center; font-size: 13px; line-height: 1.7; font-weight: 500; border-radius: 0 0 8px 8px; }
+        .page-footer p { margin: 6px 0 0; font-size: 12px; color: #ffffff; }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f8f9fa; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: #004080; border-radius: 4px; }
+        @media (max-width: 768px) {
+            .dual-panel-container { grid-template-columns: 1fr; }
+            .form-row { grid-template-columns: 1fr; }
+            .period-type-tabs { flex-direction: column; }
+            .control-buttons { justify-content: center; }
+            .facility-level-selector .selector-row { flex-direction: column; align-items: flex-start; }
+            .facility-level-selector select { min-width: 100%; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Login Screen -->
+<div class="login-screen" id="loginScreen">
+    <div class="login-card">
+        <div class="logo-container">
+            <div class="logo-box">
+                <img src="https://github.com/mohamedsillahkanu/gdp-dashboard-2/raw/6c7463b0d5c3be150aafae695a4bcbbd8aeb1499/ICF-SL.jpg" alt="ICF-SL Logo" style="width:100px;">
+            </div>
+        </div>
+        <div class="login-header">
+            <h1>DHIS2 DATASET DOWNLOAD</h1>
+            <p>Export Dataset Data in Wide Excel Format</p>
+        </div>
+        <form id="loginForm">
+            <div class="form-group">
+                <label class="form-label">DHIS2 Instance URL</label>
+                <input type="url" class="form-input readonly-input" id="instanceUrl" value="https://sl.dhis2.org/hmis" readonly>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Username</label>
+                <input type="text" class="form-input readonly-input" id="username" value="musasillahkanu" readonly>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Password</label>
+                <input type="password" class="form-input readonly-input" id="password" value="Musa1945kanu" readonly>
+            </div>
+            <button type="submit" class="btn-primary">Connect to DHIS2</button>
+        </form>
+    </div>
+</div>
+
+<!-- Main Content -->
+<div class="main-content" id="mainContent">
+    <div class="page-container">
+        <div class="page-header">
+            <div class="logo-row">
+                <div class="logo-box">
+                    <img src="https://github.com/mohamedsillahkanu/gdp-dashboard-2/raw/6c7463b0d5c3be150aafae695a4bcbbd8aeb1499/ICF-SL.jpg" alt="ICF-SL Logo" style="width:100px;">
+                </div>
+            </div>
+            <h3>Informatics Consultancy Firm-Sierra Leone (ICF-SL)</h3>
+            <p class="tagline"><em>Driving Data-Driven Solutions for Health and Development</em></p>
+            <h1>DHIS2 DATASET DOWNLOAD TOOL</h1>
+            <p class="subtitle">Export Datasets with Data Values in Excel-Ready Wide Format (.xlsx)</p>
+        </div>
+
+        <div class="content-card">
+            <div class="content-inner">
+
+                <!-- Step 1: Data Elements -->
+                <div class="section-header">
+                    <span class="section-icon">1</span>
+                    <span class="section-title">SELECT DATA ELEMENTS</span>
+                </div>
+                <div style="margin-bottom:15px;">
+                    <button type="button" class="btn-secondary" onclick="loadDatasetsWithElements()" style="width:auto;">Load Datasets</button>
+                </div>
+                <div class="dual-panel-container">
+                    <div class="panel">
+                        <div class="panel-header">
+                            <div class="panel-title">
+                                Available Items
+                                <span class="panel-count" id="availableCount">0 items</span>
+                            </div>
+                        </div>
+                        <div id="availableSearchWrapper" style="display:none;position:relative;">
+                            <input type="text" class="search-box" id="availableSearch" placeholder="Search data elements..." onkeyup="debouncedFilterAvailable()" style="padding-right:90px;">
+                            <button type="button" onclick="clearAvailableSearch()" title="Clear search" style="position:absolute;right:6px;top:50%;transform:translateY(-50%);background:#dc3545;color:white;border:none;border-radius:4px;padding:3px 10px;font-family:'Oswald',Arial,sans-serif;font-size:11px;font-weight:700;cursor:pointer;">&#x2715; Clear</button>
+                        </div>
+                        <div style="display:none;padding:5px 10px;background:#f0f0f0;border-bottom:1px solid #ddd;" id="datasetControlBtns">
+                            <button type="button" class="control-btn expand" onclick="expandAllDatasets()" style="padding:4px 10px;font-size:11px;">Expand All</button>
+                            <button type="button" class="control-btn clear" onclick="collapseAllDatasets()" style="padding:4px 10px;font-size:11px;">Collapse All</button>
+                            <button type="button" class="panel-action-btn add-all-btn" onclick="addAllItems()" style="width:auto;padding:4px 10px;font-size:11px;display:inline-block;">Add All</button>
+                        </div>
+                        <div class="panel-content" id="availablePanel">
+                            <p style="color:#666;text-align:center;padding:20px;">Click "Load Datasets" to fetch data elements...</p>
+                        </div>
+                    </div>
+                    <div class="panel">
+                        <div class="panel-header">
+                            <div class="panel-title">
+                                Selected Items
+                                <span class="panel-count" id="selectedCount">0 items</span>
+                            </div>
+                        </div>
+                        <input type="text" class="search-box" id="selectedSearch" placeholder="Search selected items..." onkeyup="debouncedFilterSelected()">
+                        <button type="button" class="panel-action-btn clear-all-btn" onclick="clearAllItems()">Clear All</button>
+                        <div class="panel-content" id="selectedPanel">
+                            <p style="color:#666;text-align:center;padding:20px;">No items selected yet</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 2: Organisation Units -->
+                <div class="section-header" style="margin-top:30px;">
+                    <span class="section-icon">2</span>
+                    <span class="section-title">SELECT ORGANISATION UNITS</span>
+                </div>
+                <div style="margin-bottom:15px;">
+                    <button type="button" class="btn-secondary" onclick="loadOrgUnitsTree()" style="width:auto;">Load Organisation Units</button>
+                </div>
+
+                <!-- Facility Level Selector -->
+                <div class="facility-level-selector" id="facilityLevelSelector">
+                    <div class="selector-row">
+                        <label>Health Facility Level:</label>
+                        <select id="facilityLevelSelect" onchange="updateFacilityLevel()"></select>
+                    </div>
+                    <div class="info-text" id="facilityLevelInfo">
+                        <strong>Facility Level:</strong> The detected health facility level where data is reported.
+                        <br><strong>Tip:</strong> You can select any level (district, region, etc.) and all health facilities underneath will be automatically included.
+                    </div>
+                </div>
+
+                <!-- Facility Types -->
+                <div id="groupSetsContainer" style="margin-bottom:15px;">
+                    <div style="margin-bottom:10px;">
+                        <button type="button" class="btn-secondary" onclick="loadFacilityTypes()" id="loadFacilityTypesBtn" style="width:auto;">Load Facility Types</button>
+                    </div>
+                    <div id="groupSetsContent" style="display:none;">
+                        <label class="form-label">Filter by Facility Type (Optional)</label>
+                        <div id="activeFilterBadge" style="display:none;background:#ffc107;color:#000;padding:8px 15px;border-radius:6px;margin-bottom:10px;font-weight:600;">
+                            <span id="activeFilterText">Filter Active</span>
+                            <button type="button" onclick="clearFilterAndReload()" style="margin-left:10px;background:#dc3545;color:white;border:none;padding:4px 10px;border-radius:4px;cursor:pointer;font-family:'Oswald',Arial,sans-serif;font-size:12px;">Clear Filter</button>
+                        </div>
+                        <div id="groupOptionsContainer" style="background:#f8f9fa;border:2px solid #004080;border-radius:8px;padding:15px;max-height:250px;overflow-y:auto;">
+                            <div style="margin-bottom:10px;">
+                                <button type="button" class="control-btn select-all" onclick="selectAllGroupOptions()" style="padding:5px 10px;font-size:11px;">Select All</button>
+                                <button type="button" class="control-btn clear" onclick="clearAllGroupOptions()" style="padding:5px 10px;font-size:11px;">Clear All</button>
+                                <button type="button" class="btn-gold" onclick="applyFacilityTypeFilter()" style="padding:8px 20px;font-size:12px;margin-left:10px;">Apply Filter</button>
+                            </div>
+                            <div id="groupOptionsList"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="org-unit-tree" id="orgUnitTree">
+                    <p style="color:#666;text-align:center;">Click "Load Organisation Units" to fetch...</p>
+                </div>
+                <div class="control-buttons">
+                    <button type="button" class="control-btn expand" onclick="expandAllOrgUnits()">Expand All</button>
+                    <button type="button" class="control-btn clear" onclick="collapseAllOrgUnits()">Collapse All</button>
+                    <button type="button" class="control-btn select-all" onclick="selectAllFacilities()">Select All HFs</button>
+                    <button type="button" class="control-btn select-all" onclick="selectAllAtLevel()" style="border-color:#17a2b8;color:#17a2b8;">Select Level...</button>
+                    <button type="button" class="control-btn clear" onclick="clearAllOrgUnits()">Clear All</button>
+                </div>
+
+                <!-- Level Selection Modal -->
+                <div id="levelSelectModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:1000;justify-content:center;align-items:center;">
+                    <div style="background:white;padding:25px;border-radius:8px;border:3px solid #004080;max-width:400px;width:90%;">
+                        <h3 style="margin:0 0 15px 0;color:#004080;">Select All at Level</h3>
+                        <p style="margin:0 0 15px 0;font-size:13px;color:#666;">Choose a level to select all organisation units:</p>
+                        <select id="levelSelectDropdown" class="form-select" style="margin-bottom:15px;"></select>
+                        <div style="display:flex;gap:10px;justify-content:flex-end;">
+                            <button type="button" class="btn-secondary" onclick="closeLevelModal()" style="padding:8px 16px;">Cancel</button>
+                            <button type="button" class="btn-gold" onclick="confirmSelectLevel()" style="padding:8px 16px;">Select</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 3: Period -->
+                <div class="section-header" style="margin-top:30px;">
+                    <span class="section-icon">3</span>
+                    <span class="section-title">SELECT PERIOD</span>
+                </div>
+                <div class="period-selector">
+                    <label class="form-label">Select Period Type</label>
+                    <div class="period-type-tabs">
+                        <div class="period-tab active" onclick="selectPeriodType('monthly')">Monthly</div>
+                        <div class="period-tab" onclick="selectPeriodType('range')">Date Range</div>
+                        <div class="period-tab" onclick="selectPeriodType('quarterly')">Quarterly</div>
+                        <div class="period-tab" onclick="selectPeriodType('yearly')">Yearly</div>
+                    </div>
+                    <div class="period-inputs active" id="monthly-inputs">
+                        <div class="form-group">
+                            <label class="form-label">Year-Month</label>
+                            <input type="month" class="form-input" name="period" id="periodMonth">
+                        </div>
+                    </div>
+                    <div class="period-inputs" id="range-inputs">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">Start Month</label>
+                                <input type="month" class="form-input" name="periodStart" id="periodStart">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">End Month</label>
+                                <input type="month" class="form-input" name="periodEnd" id="periodEnd">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="period-inputs" id="quarterly-inputs">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">Year</label>
+                                <input type="number" class="form-input" name="year" id="quarterYear" min="2000" max="2030" value="2025">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Quarter</label>
+                                <select class="form-select" name="quarter" id="quarter">
+                                    <option value="Q1">Q1 (Jan-Mar)</option>
+                                    <option value="Q2">Q2 (Apr-Jun)</option>
+                                    <option value="Q3">Q3 (Jul-Sep)</option>
+                                    <option value="Q4">Q4 (Oct-Dec)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="period-inputs" id="yearly-inputs">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">Start Year</label>
+                                <input type="number" class="form-input" name="startYear" id="startYear" min="2000" max="2030" placeholder="Start Year">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">End Year</label>
+                                <input type="number" class="form-input" name="endYear" id="endYear" min="2000" max="2030" placeholder="End Year">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 4: Progress -->
+                <div class="progress-section" id="progressSection">
+                    <div class="section-header">
+                        <span class="section-icon">4</span>
+                        <span class="section-title">DOWNLOAD PROGRESS</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill" style="width:0%">0%</div>
+                    </div>
+                    <div class="log-container" id="logContainer"></div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div style="text-align:center;margin-top:30px;display:flex;justify-content:center;gap:15px;flex-wrap:wrap;">
+                    <button type="button" class="btn-secondary" onclick="previewDownload()" style="padding:16px 30px;font-size:14px;">PREVIEW SELECTION</button>
+                    <button type="button" class="btn-gold" id="downloadDatasetsBtn" onclick="executeDownloadDatasets()" style="padding:16px 40px;font-size:16px;">⬇ DOWNLOAD AS EXCEL (.xlsx)</button>
+                    <button type="button" class="btn-reset" onclick="resetAllSelections()">RESET ALL</button>
+                </div>
+
+            </div>
+        </div>
+
+        <div class="page-footer">
+            <p style="margin:0;font-weight:700;">Informatics Consultancy Firm-Sierra Leone (ICF-SL)</p>
+            <p>Driving Data-Driven Solutions for Health and Development</p>
+            <p style="font-size:10px;">© 2025 Informatics Consultancy Firm-Sierra Leone (ICF-SL)</p>
+        </div>
+    </div>
+</div>
+
+<div class="notification" id="notification"></div>
+
+<script>
+const GOOGLE_APPS_SCRIPT_PROXY = 'https://script.google.com/macros/s/AKfycbyRXc68PYSmDSCYPakAS8Gc9R00kRjmsMYoDujPYMItyquXfwMAJUtRqXLiDlNWbSfDQQ/exec';
+const state = { config: null, isLoggedIn: false };
+
+let datasetsData = [];
+let selectedDataElements = new Map();
+let orgUnitsData = [];
+let allOrgUnitsData = [];
+let selectedOrgUnits = new Set();
+let orgUnitGroups = {};
+let selectedGroupOptions = new Set();
+let facilityLevel = 4;
+let maxOrgUnitLevel = 1;
+let expandedDatasets = new Set();
+let selectedPeriodsForExport = [];
+
+const ORG_UNIT_BATCH_SIZE = 50;
+const DATA_ELEMENT_BATCH_SIZE = 100;
+
+// ─── HELPERS ────────────────────────────────────────────────────────────────
+
+// ── Facility type classifier — exact copy from Age Disaggregation tool ──────
+// Returns 'Hospital' | 'Clinic' | 'CHC' | 'CHP' | 'MCHP' | 'Other'
+// Logic: suffix-first (last word of name), then substring fallback.
+function getHFType(name) {
+    const u = (name || '').toUpperCase();
+    const parts = u.trim().split(/\s+/);
+    const suffix = parts[parts.length - 1] || '';
+    if (suffix === 'HOSPITAL') return 'Hospital';
+    if (suffix === 'MCHP')     return 'MCHP';
+    if (suffix === 'CHC')      return 'CHC';
+    if (suffix === 'CHP')      return 'CHP';
+    const clinicSuffixes = ['CLINIC','CLINNIC','CLINNC','CLIMIC','CLINC','CLINIK','CLENIC','CLINCC','CLIN'];
+    if (clinicSuffixes.includes(suffix)) return 'Clinic';
+    // Substring fallbacks
+    if (u.includes('HOSPITAL')) return 'Hospital';
+    if (u.includes('MCHP'))     return 'MCHP';
+    if (u.includes('CHC'))      return 'CHC';
+    if (u.includes('CHP'))      return 'CHP';
+    if (clinicSuffixes.some(c => u.includes(c))) return 'Clinic';
+    return 'Other';
+}
+
+const ASSESSED_TYPES = ['Hospital', 'Clinic', 'CHC', 'CHP', 'MCHP'];
+
+function determineFacilityLevel() {
+    const levels = [...new Set(orgUnitsData.map(ou => ou.level))].sort((a, b) => a - b);
+    if (levels.length === 0) return 1;
+    if (levels.length === 1) return levels[0];
+    let fl = levels[levels.length - 1];
+    for (let i = 1; i < levels.length; i++) {
+        const currentLevel = levels[i];
+        const parentLevel  = levels[i - 1];
+        const parentsAtPrevLevel  = orgUnitsData.filter(ou => ou.level === parentLevel);
+        const unitsAtCurrentLevel = orgUnitsData.filter(ou => ou.level === currentLevel);
+        const parentIdsWithChildren = new Set(
+            unitsAtCurrentLevel.filter(ou => ou.parent && ou.parent.id).map(ou => ou.parent.id)
+        );
+        const coverage = parentsAtPrevLevel.length > 0
+            ? parentIdsWithChildren.size / parentsAtPrevLevel.length : 0;
+        if (coverage >= 0.8)      { fl = currentLevel; }
+        else if (coverage < 0.5)  { break; }
+    }
+    return fl;
+}
+
+function makeProxyRequest(targetUrl, options = {}) {
+    let proxyUrl = `${GOOGLE_APPS_SCRIPT_PROXY}?url=${encodeURIComponent(targetUrl)}`;
+    if (options.headers && options.headers.Authorization) {
+        proxyUrl += `&Authorization=${encodeURIComponent(options.headers.Authorization)}`;
+    }
+    return fetch(proxyUrl, { method: options.method || 'GET', body: options.body });
+}
+
+async function fetchWithAuth(url, options = {}) {
+    if (!state.config) throw new Error('Not authenticated');
+    const authHeader = 'Basic ' + btoa(`${state.config.username}:${state.config.password}`);
+    return makeProxyRequest(url, {
+        ...options,
+        headers: { 'Authorization': authHeader, 'Content-Type': 'application/json', ...options.headers }
+    });
+}
+
+function showNotification(message, type) {
+    const n = document.getElementById('notification');
+    if (!n) return;
+    n.textContent = message;
+    n.className = `notification ${type}`;
+    setTimeout(() => { n.className = 'notification'; }, 4000);
+}
+
+function setProgress(percent) {
+    const pf = document.getElementById('progressFill');
+    if (pf) { pf.style.width = percent + '%'; pf.textContent = percent + '%'; }
+}
+
+function showProgress() {
+    const ps = document.getElementById('progressSection');
+    if (ps) ps.classList.add('active');
+}
+
+function log(message, type = 'info') {
+    const container = document.getElementById('logContainer');
+    if (!container) return;
+    const entry = document.createElement('div');
+    entry.className = `log-entry ${type}`;
+    entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+    container.appendChild(entry);
+    container.scrollTop = container.scrollHeight;
+}
+
+function clearLogs() {
+    const c = document.getElementById('logContainer');
+    if (c) c.innerHTML = '';
+}
+
+function debounce(func, wait) {
+    let timeout;
+    return function(...args) {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(this, args), wait);
+    };
+}
+
+// ─── PERIOD ─────────────────────────────────────────────────────────────────
+
+function selectPeriodType(type) {
+    document.querySelectorAll('.period-tab').forEach(tab => tab.classList.remove('active'));
+    document.querySelectorAll('.period-inputs').forEach(inp => inp.classList.remove('active'));
+    event.target.classList.add('active');
+    const target = document.getElementById(`${type}-inputs`);
+    if (target) target.classList.add('active');
+}
+
+function generateMonthlyPeriods(startYearMonth, endYearMonth) {
+    const periods = [];
+    const [sy, sm] = startYearMonth.split('-').map(Number);
+    const [ey, em] = endYearMonth.split('-').map(Number);
+    let cy = sy, cm = sm;
+    while (cy < ey || (cy === ey && cm <= em)) {
+        periods.push(`${cy}${String(cm).padStart(2, '0')}`);
+        cm++;
+        if (cm > 12) { cm = 1; cy++; }
+    }
+    return periods;
+}
+
+function generateYearlyPeriods(startYear, endYear) {
+    const periods = [];
+    for (let y = startYear; y <= endYear; y++) periods.push(String(y));
+    return periods;
+}
+
+function getPeriodFromForm() {
+    const activeTab = document.querySelector('.period-tab.active');
+    if (!activeTab) return '';
+    const tabText = activeTab.textContent.trim().toLowerCase();
+    selectedPeriodsForExport = [];
+
+    if (tabText === 'monthly') {
+        const period = document.querySelector('#monthly-inputs input[name="period"]')?.value;
+        if (period) { const fp = period.replace('-', ''); selectedPeriodsForExport = [fp]; return `period=${fp}`; }
+    } else if (tabText === 'date range') {
+        const start = document.querySelector('#range-inputs input[name="periodStart"]')?.value;
+        const end   = document.querySelector('#range-inputs input[name="periodEnd"]')?.value;
+        if (start && end) {
+            selectedPeriodsForExport = generateMonthlyPeriods(start, end);
+            const [sy, sm] = start.split('-').map(Number);
+            const [ey, em] = end.split('-').map(Number);
+            const lastDay = new Date(ey, em, 0).getDate();
+            return `startDate=${sy}-${String(sm).padStart(2,'0')}-01&endDate=${ey}-${String(em).padStart(2,'0')}-${lastDay}`;
+        }
+    } else if (tabText === 'quarterly') {
+        const year    = document.querySelector('#quarterly-inputs input[name="year"]')?.value;
+        const quarter = document.querySelector('#quarterly-inputs select[name="quarter"]')?.value;
+        if (year && quarter) { const fp = `${year}${quarter}`; selectedPeriodsForExport = [fp]; return `period=${fp}`; }
+    } else if (tabText === 'yearly') {
+        const startYear = parseInt(document.querySelector('#yearly-inputs input[name="startYear"]')?.value);
+        const endYear   = parseInt(document.querySelector('#yearly-inputs input[name="endYear"]')?.value);
+        if (startYear && endYear) { selectedPeriodsForExport = generateYearlyPeriods(startYear, endYear); return `startDate=${startYear}-01-01&endDate=${endYear}-12-31`; }
+        else if (startYear)       { selectedPeriodsForExport = [String(startYear)]; return `period=${startYear}`; }
+    }
+    return '';
+}
+
+// ─── DATA ELEMENTS ───────────────────────────────────────────────────────────
+
+async function loadDatasetsWithElements() {
+    const btn = document.querySelector('button[onclick="loadDatasetsWithElements()"]');
+    const orig = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Loading... 0%';
+    try {
+        btn.textContent = 'Loading... 20%';
+        log('Fetching datasets from DHIS2...', 'info');
+        showNotification('Loading datasets...', 'info');
+        const url = `${state.config.instanceUrl}/api/dataSets.json?fields=id,displayName,name,periodType,dataSetElements[dataElement[id,displayName,name]]&paging=false`;
+        const response = await fetchWithAuth(url);
+        btn.textContent = 'Loading... 60%';
+        if (!response.ok) throw new Error(`Failed to fetch datasets: ${response.status}`);
+        const data = await response.json();
+        btn.textContent = 'Loading... 80%';
+        if (!data.dataSets || !Array.isArray(data.dataSets)) {
+            showNotification('No datasets found in response', 'error');
+            btn.disabled = false; btn.textContent = orig; return;
+        }
+        datasetsData = data.dataSets;
+        renderAvailableItems(datasetsData);
+        renderSelectedItems();
+        document.getElementById('availableSearchWrapper').style.display = 'block';
+        document.getElementById('datasetControlBtns').style.display = 'block';
+        log(`Loaded ${data.dataSets.length} datasets`, 'success');
+        showNotification(`Loaded ${data.dataSets.length} datasets`, 'success');
+        btn.textContent = 'Done!';
+        setTimeout(() => { btn.textContent = orig; }, 1000);
+    } catch (error) {
+        log(`Error: ${error.message}`, 'error');
+        showNotification(`Failed to load datasets: ${error.message}`, 'error');
+        btn.textContent = orig;
+    } finally {
+        btn.disabled = false;
+    }
+}
+
+function renderAvailableItems(datasets) {
+    const container = document.getElementById('availablePanel');
+    let totalElements = 0;
+
+    const datasetInfo = datasets.map(ds => {
+        if (!ds.dataSetElements || ds.dataSetElements.length === 0) return null;
+        const available = ds.dataSetElements.filter(dse => dse.dataElement && !selectedDataElements.has(dse.dataElement.id));
+        if (available.length === 0) return null;
+        totalElements += available.length;
+        return { ds, availableElements: available };
+    }).filter(Boolean);
+
+    if (totalElements === 0) {
+        container.innerHTML = '<div style="text-align:center;padding:20px;color:#666;">All items have been selected!</div>';
+        document.getElementById('availableCount').textContent = '0 items';
+        return;
+    }
+
+    const fragment = document.createDocumentFragment();
+    datasetInfo.forEach(({ ds, availableElements }) => {
+        const isExpanded = expandedDatasets.has(ds.id);
+        const datasetDiv = document.createElement('div');
+        datasetDiv.className = 'dataset-item';
+        datasetDiv.dataset.id = ds.id;
+
+        const toggle = document.createElement('span');
+        toggle.className = 'item-toggle';
+        toggle.textContent = isExpanded ? '▼' : '▶';
+        toggle.onclick = (e) => { e.stopPropagation(); toggleDatasetExpand(ds.id); };
+
+        const nameSpan = document.createElement('span');
+        nameSpan.className = 'item-name';
+        const periodType = ds.periodType ? ` (${ds.periodType})` : '';
+        nameSpan.textContent = `${ds.displayName || ds.name || ds.id}${periodType} - ${availableElements.length} elements`;
+
+        datasetDiv.appendChild(toggle);
+        datasetDiv.appendChild(nameSpan);
+        datasetDiv.onclick = (e) => { if (!e.target.classList.contains('item-toggle')) toggleDatasetExpand(ds.id); };
+        fragment.appendChild(datasetDiv);
+
+        const elementsContainer = document.createElement('div');
+        elementsContainer.className = 'data-elements-container' + (isExpanded ? ' expanded' : '');
+        elementsContainer.id = `elements-${ds.id}`;
+
+        availableElements.forEach(dse => {
+            const elementDiv = document.createElement('div');
+            elementDiv.className = 'data-element-item';
+            elementDiv.dataset.id = dse.dataElement.id;
+            elementDiv.dataset.datasetId = ds.id;
+            elementDiv.dataset.datasetName = ds.displayName || ds.name || ds.id;
+            elementDiv.dataset.name = (dse.dataElement.displayName || dse.dataElement.name || '').toLowerCase();
+
+            const elNameSpan = document.createElement('span');
+            elNameSpan.className = 'item-name';
+            elNameSpan.textContent = dse.dataElement.displayName || dse.dataElement.name || dse.dataElement.id;
+
+            const addBtn = document.createElement('button');
+            addBtn.className = 'add-btn';
+            addBtn.textContent = '+ Add';
+            addBtn.onclick = (e) => {
+                e.stopPropagation();
+                addItem(dse.dataElement.id, ds.id, ds.displayName || ds.name, dse.dataElement.displayName || dse.dataElement.name);
+            };
+
+            elementDiv.onclick = () => addItem(dse.dataElement.id, ds.id, ds.displayName || ds.name, dse.dataElement.displayName || dse.dataElement.name);
+            elementDiv.appendChild(elNameSpan);
+            elementDiv.appendChild(addBtn);
+            elementsContainer.appendChild(elementDiv);
+        });
+
+        fragment.appendChild(elementsContainer);
+    });
+
+    container.innerHTML = '';
+    container.appendChild(fragment);
+    document.getElementById('availableCount').textContent = `${totalElements} items`;
+}
+
+function toggleDatasetExpand(datasetId) {
+    const ec = document.getElementById(`elements-${datasetId}`);
+    const toggle = document.querySelector(`.dataset-item[data-id="${datasetId}"] .item-toggle`);
+    if (ec && toggle) {
+        if (ec.classList.contains('expanded')) {
+            ec.classList.remove('expanded'); toggle.textContent = '▶'; expandedDatasets.delete(datasetId);
+        } else {
+            ec.classList.add('expanded'); toggle.textContent = '▼'; expandedDatasets.add(datasetId);
+        }
+    }
+}
+
+function expandAllDatasets() {
+    document.querySelectorAll('.data-elements-container').forEach(c => {
+        c.classList.add('expanded');
+        expandedDatasets.add(c.id.replace('elements-', ''));
+    });
+    document.querySelectorAll('.dataset-item .item-toggle').forEach(t => { t.textContent = '▼'; });
+}
+
+function collapseAllDatasets() {
+    document.querySelectorAll('.data-elements-container').forEach(c => c.classList.remove('expanded'));
+    expandedDatasets.clear();
+    document.querySelectorAll('.dataset-item .item-toggle').forEach(t => { t.textContent = '▶'; });
+}
+
+function renderSelectedItems() {
+    const container = document.getElementById('selectedPanel');
+    if (selectedDataElements.size === 0) {
+        container.innerHTML = '<p style="color:#666;text-align:center;padding:20px;">No items selected yet</p>';
+        document.getElementById('selectedCount').textContent = '0 items';
+        return;
+    }
+
+    const selectedItems = Array.from(selectedDataElements.entries()).map(([id, info]) => ({
+        id, name: info.elementName, datasetId: info.datasetId, datasetName: info.datasetName
+    }));
+    selectedItems.sort((a, b) => {
+        const dc = a.datasetName.localeCompare(b.datasetName);
+        return dc !== 0 ? dc : a.name.localeCompare(b.name);
+    });
+
+    const fragment = document.createDocumentFragment();
+    let currentDataset = '';
+    selectedItems.forEach(item => {
+        if (item.datasetName !== currentDataset) {
+            currentDataset = item.datasetName;
+            const headerDiv = document.createElement('div');
+            headerDiv.style.cssText = 'background:#004080;color:white;padding:8px 12px;margin:8px 0 4px 0;border-radius:4px;font-size:12px;font-weight:600;';
+            headerDiv.textContent = item.datasetName;
+            fragment.appendChild(headerDiv);
+        }
+        const itemDiv = document.createElement('div');
+        itemDiv.className = 'selected-item';
+        itemDiv.dataset.id = item.id;
+        itemDiv.dataset.name = item.name.toLowerCase();
+
+        const nameSpan = document.createElement('span');
+        nameSpan.className = 'item-name';
+        nameSpan.textContent = item.name;
+
+        const removeBtn = document.createElement('button');
+        removeBtn.className = 'remove-btn';
+        removeBtn.textContent = '×';
+        removeBtn.onclick = (e) => { e.stopPropagation(); removeItem(item.id); };
+
+        itemDiv.appendChild(nameSpan);
+        itemDiv.appendChild(removeBtn);
+        fragment.appendChild(itemDiv);
+    });
+
+    container.innerHTML = '';
+    container.appendChild(fragment);
+    document.getElementById('selectedCount').textContent = `${selectedItems.length} items`;
+}
+
+function reRenderAvailable() {
+    renderAvailableItems(datasetsData);
+    const searchTerm = document.getElementById('availableSearch').value;
+    if (searchTerm) filterAvailableItems();
+}
+
+function clearAvailableSearch() {
+    document.getElementById('availableSearch').value = '';
+    renderAvailableItems(datasetsData);
+}
+
+function addItem(itemId, datasetId, datasetName, elementName) {
+    if (selectedDataElements.has(itemId)) return;
+    selectedDataElements.set(itemId, { datasetId, datasetName, elementName });
+    reRenderAvailable();
+    renderSelectedItems();
+}
+
+function removeItem(itemId) {
+    selectedDataElements.delete(itemId);
+    reRenderAvailable();
+    renderSelectedItems();
+}
+
+function addAllItems() {
+    datasetsData.forEach(ds => {
+        if (ds.dataSetElements) {
+            ds.dataSetElements.forEach(dse => {
+                if (dse.dataElement && !selectedDataElements.has(dse.dataElement.id)) {
+                    selectedDataElements.set(dse.dataElement.id, {
+                        datasetId: ds.id,
+                        datasetName: ds.displayName || ds.name || ds.id,
+                        elementName: dse.dataElement.displayName || dse.dataElement.name || dse.dataElement.id
+                    });
+                }
+            });
+        }
+    });
+    reRenderAvailable();
+    renderSelectedItems();
+}
+
+function clearAllItems() {
+    selectedDataElements.clear();
+    reRenderAvailable();
+    renderSelectedItems();
+}
+
+const debouncedFilterAvailable = debounce(filterAvailableItems, 150);
+const debouncedFilterSelected  = debounce(filterSelectedItems,  150);
+
+function filterAvailableItems() {
+    const searchTerm = document.getElementById('availableSearch').value.toLowerCase();
+    document.querySelectorAll('#availablePanel .dataset-item').forEach(datasetDiv => {
+        const datasetId = datasetDiv.dataset.id;
+        const elementsContainer = document.getElementById(`elements-${datasetId}`);
+        if (!elementsContainer) return;
+        let hasVisible = false;
+        elementsContainer.querySelectorAll('.data-element-item').forEach(el => {
+            const name = el.dataset.name;
+            if (name && name.includes(searchTerm)) { el.style.display = 'flex'; hasVisible = true; }
+            else { el.style.display = 'none'; }
+        });
+        const dsName = datasetDiv.querySelector('.item-name').textContent.toLowerCase();
+        datasetDiv.style.display = (dsName.includes(searchTerm) || hasVisible) ? 'flex' : 'none';
+    });
+}
+
+function filterSelectedItems() {
+    const searchTerm = document.getElementById('selectedSearch').value.toLowerCase();
+    document.querySelectorAll('#selectedPanel .selected-item').forEach(item => {
+        item.style.display = item.dataset.name.includes(searchTerm) ? 'flex' : 'none';
+    });
+}
+
+// ─── ORGANISATION UNITS ──────────────────────────────────────────────────────
+
+async function loadOrgUnitsTree() {
+    const btn = document.querySelector('button[onclick="loadOrgUnitsTree()"]');
+    const orig = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Loading... 0%';
+    try {
+        btn.textContent = 'Loading... 20%';
+        log('Fetching organisation units with hierarchy...', 'info');
+        showNotification('Loading organisation units...', 'info');
+
+        // ── Fetch with ancestors — same pattern as Age Disaggregation tool ──
+        // ancestors give us the full hierarchy (district, chiefdom) without
+        // needing to build a parent-walk loop.
+        const url = `${state.config.instanceUrl}/api/organisationUnits.json` +
+            `?fields=id,displayName,level,parent[id],ancestors[id,displayName,level]` +
+            `&paging=false&pageSize=50000`;
+        const response = await fetchWithAuth(url);
+        btn.textContent = 'Loading... 65%';
+        if (!response.ok) throw new Error('Failed to fetch organisation units');
+        const data = await response.json();
+        btn.textContent = 'Loading... 80%';
+
+        // ── Classify each OU by name using getHFType() ─────────────────────
+        // Stamps ou.hfType on every OU in the dataset.
+        // We do this after facilityLevel is known so the log counts are correct.
+        const rawOUs = data.organisationUnits || [];
+        rawOUs.forEach(ou => { ou.hfType = getHFType(ou.displayName); });
+
+        orgUnitsData    = rawOUs;
+        allOrgUnitsData = [...rawOUs];
+        maxOrgUnitLevel = Math.max(...orgUnitsData.map(ou => ou.level));
+        facilityLevel   = determineFacilityLevel();
+
+        const typeCounts = {};
+        ASSESSED_TYPES.forEach(t => { typeCounts[t] = 0; });
+        let otherCount = 0;
+        orgUnitsData.filter(ou => ou.level === facilityLevel).forEach(ou => {
+            if (ASSESSED_TYPES.includes(ou.hfType)) typeCounts[ou.hfType]++;
+            else otherCount++;
+        });
+
+        log(
+            `Loaded ${orgUnitsData.length} OUs · Level-${facilityLevel} facilities: ` +
+            ASSESSED_TYPES.map(t => `${t}: ${typeCounts[t]}`).join(' · ') +
+            ` · Other/excluded: ${otherCount}`,
+            'success'
+        );
+
+        populateFacilityLevelSelector();
+        document.getElementById('facilityLevelSelector').classList.add('active');
+
+        // ── Populate the name-based facility type filter checkboxes ─────────
+        populateHFTypeFilter(typeCounts);
+
+        btn.textContent = 'Loading... 95%';
+        const tree = buildOrgUnitTree(orgUnitsData);
+        renderOrgUnitTree(tree);
+
+        showNotification(`Loaded ${orgUnitsData.length} organisation units`, 'success');
+        btn.textContent = 'Done!';
+        setTimeout(() => { btn.textContent = orig; }, 1000);
+    } catch (error) {
+        log(`Error: ${error.message}`, 'error');
+        showNotification('Failed to load organisation units', 'error');
+        btn.textContent = orig;
+    } finally {
+        btn.disabled = false;
+    }
+}
+
+// ── Populate the facility-type checkboxes from name classification ────────────
+// Replaces the old DHIS2-group-based UI with a pre-populated, ready-to-use
+// checkbox list for the 5 assessed types (no extra API call needed).
+function populateHFTypeFilter(typeCounts) {
+    const list = document.getElementById('groupOptionsList');
+    list.innerHTML = '';
+    ASSESSED_TYPES.forEach(typeName => {
+        const count = typeCounts[typeName] || 0;
+        const div = document.createElement('div');
+        div.style.cssText = 'padding:6px 10px;margin:2px 0;display:flex;align-items:center;gap:8px;background:white;border-radius:4px;';
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.id = `hftype-${typeName}`;
+        checkbox.dataset.hftype = typeName;
+        checkbox.style.accentColor = '#004080';
+        checkbox.style.width = '18px';
+        checkbox.style.height = '18px';
+        checkbox.onchange = () => {
+            if (checkbox.checked) selectedGroupOptions.add(typeName);
+            else selectedGroupOptions.delete(typeName);
+        };
+        const label = document.createElement('label');
+        label.htmlFor = `hftype-${typeName}`;
+        label.textContent = `${typeName}  (${count.toLocaleString()} facilities)`;
+        label.style.cursor = 'pointer';
+        label.style.flex = '1';
+        div.appendChild(checkbox);
+        div.appendChild(label);
+        list.appendChild(div);
+    });
+    document.getElementById('groupSetsContent').style.display = 'block';
+    // Hide the now-redundant "Load Facility Types" button — classification is
+    // already done from the name during loadOrgUnitsTree().
+    const loadBtn = document.getElementById('loadFacilityTypesBtn');
+    if (loadBtn) {
+        loadBtn.textContent = '✓ Facility Types Ready (name-based)';
+        loadBtn.disabled = true;
+        loadBtn.style.opacity = '0.6';
+    }
+}
+
+function populateFacilityLevelSelector() {
+    const select = document.getElementById('facilityLevelSelect');
+    const levels = [...new Set(orgUnitsData.map(ou => ou.level))].sort((a, b) => a - b);
+    const levelCounts = {};
+    levels.forEach(l => { levelCounts[l] = orgUnitsData.filter(ou => ou.level === l).length; });
+    select.innerHTML = levels.map(l =>
+        `<option value="${l}" ${l === facilityLevel ? 'selected' : ''}>Level ${l} (${levelCounts[l]} units)</option>`
+    ).join('');
+}
+
+function updateFacilityLevel() {
+    facilityLevel = parseInt(document.getElementById('facilityLevelSelect').value);
+    selectedOrgUnits.clear();
+    const tree = buildOrgUnitTree(orgUnitsData);
+    renderOrgUnitTree(tree);
+    log(`Facility level changed to Level ${facilityLevel}`, 'info');
+    showNotification(`Facility level set to Level ${facilityLevel}`, 'info');
+}
+
+async function loadFacilityTypes() {
+    // ── No longer makes a separate API call ──────────────────────────────────
+    // Facility type classification is now done during loadOrgUnitsTree() using
+    // getHFType() (name-based, same as Age Disaggregation tool).
+    // This button is kept for UI compatibility but redirects the user.
+    if (allOrgUnitsData.length === 0) {
+        showNotification('Please load Organisation Units first — facility types will be classified automatically.', 'info');
+        log('Load Organisation Units first. Facility types are classified by name automatically.', 'warning');
+    } else {
+        showNotification('Facility types are already loaded — classified by name (getHFType).', 'info');
+        log('Facility types already available from org unit name classification.', 'success');
+    }
+}
+
+function selectAllGroupOptions() {
+    document.querySelectorAll('#groupOptionsList input[type="checkbox"]').forEach(cb => {
+        cb.checked = true;
+        // checkboxes now store the type name in data-hftype
+        selectedGroupOptions.add(cb.dataset.hftype || cb.dataset.id);
+    });
+}
+
+function clearAllGroupOptions() {
+    document.querySelectorAll('#groupOptionsList input[type="checkbox"]').forEach(cb => { cb.checked = false; });
+    selectedGroupOptions.clear();
+}
+
+function applyFacilityTypeFilter() {
+    const btn = document.querySelector('button[onclick="applyFacilityTypeFilter()"]');
+    const orig = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Filtering...';
+    showProgress();
+    clearLogs();
+
+    setTimeout(() => {
+        const filterBadge = document.getElementById('activeFilterBadge');
+        const filterText  = document.getElementById('activeFilterText');
+
+        if (selectedGroupOptions.size === 0) {
+            orgUnitsData = [...allOrgUnitsData];
+            showNotification('No filter applied - showing all organisation units', 'info');
+            filterBadge.style.display = 'none';
+        } else {
+            // ── Filter using getHFType() name classification ──────────────────
+            // selectedGroupOptions now contains type NAME strings
+            // ('Hospital', 'Clinic', 'CHC', 'CHP', 'MCHP') — same as Age Disagg tool.
+            // Each facility has ou.hfType pre-stamped during loadOrgUnitsTree().
+            const selectedTypeNames = Array.from(selectedGroupOptions);
+            const totalBefore = allOrgUnitsData.filter(ou => ou.level === facilityLevel).length;
+
+            // Unique facilities matching the selected types (uid is already unique)
+            const matchingFacilities = allOrgUnitsData.filter(ou =>
+                ou.level === facilityLevel && selectedTypeNames.includes(ou.hfType)
+            );
+
+            // Collect ancestor parents so the tree renders correctly
+            const filteredIds  = new Set(matchingFacilities.map(ou => ou.id));
+            const parentsToAdd = [];
+            matchingFacilities.forEach(ou => {
+                let current = ou;
+                while (current && current.parent && current.parent.id) {
+                    const parentId = current.parent.id;
+                    if (!filteredIds.has(parentId)) {
+                        const parent = allOrgUnitsData.find(p => p.id === parentId);
+                        if (parent) { parentsToAdd.push(parent); filteredIds.add(parentId); }
+                    }
+                    current = allOrgUnitsData.find(p => p.id === parentId);
+                }
+            });
+
+            orgUnitsData = [...matchingFacilities, ...parentsToAdd];
+
+            const facilityCount = matchingFacilities.length;
+            filterText.textContent =
+                `Filter Active: ${facilityCount} of ${totalBefore} facilities ` +
+                `(${selectedTypeNames.join(', ')}) — name-based classification`;
+            filterBadge.style.display = 'block';
+            log(`Filter applied: ${facilityCount} unique facilities (${selectedTypeNames.join(', ')}) · ${totalBefore - facilityCount} excluded`, 'success');
+            showNotification(`Filtered to ${facilityCount} unique facilities`, 'success');
+        }
+
+        if (orgUnitsData.length > 0) {
+            maxOrgUnitLevel = Math.max(...orgUnitsData.map(ou => ou.level));
+            facilityLevel   = determineFacilityLevel();
+            populateFacilityLevelSelector();
+        }
+
+        selectedOrgUnits.clear();
+        const tree = buildOrgUnitTree(orgUnitsData);
+        renderOrgUnitTree(tree);
+
+        btn.textContent = 'Done!';
+        setTimeout(() => { btn.disabled = false; btn.textContent = orig; }, 500);
+    }, 100);
+}
+
+function clearFilterAndReload() {
+    selectedGroupOptions.clear();
+    document.querySelectorAll('#groupOptionsList input[type="checkbox"]').forEach(cb => cb.checked = false);
+    orgUnitsData = [...allOrgUnitsData];
+    document.getElementById('activeFilterBadge').style.display = 'none';
+    if (orgUnitsData.length > 0) {
+        maxOrgUnitLevel = Math.max(...orgUnitsData.map(ou => ou.level));
+        facilityLevel   = determineFacilityLevel();
+        populateFacilityLevelSelector();
+    }
+    selectedOrgUnits.clear();
+    const tree = buildOrgUnitTree(orgUnitsData);
+    renderOrgUnitTree(tree);
+    showNotification('Filter cleared - showing all facilities', 'info');
+    log('Filter cleared. All organisation units restored.', 'info');
+}
+
+function buildOrgUnitTree(orgUnits) {
+    const map = {};
+    const roots = [];
+    orgUnits.forEach(ou => { map[ou.id] = { ...ou, children: [] }; });
+    orgUnits.forEach(ou => {
+        if (ou.parent && map[ou.parent.id]) {
+            map[ou.parent.id].children.push(map[ou.id]);
+        } else {
+            roots.push(map[ou.id]);
+        }
+    });
+    const sortChildren = (node) => {
+        if (node.children && node.children.length > 0) {
+            node.children.sort((a, b) => (a.displayName || '').localeCompare(b.displayName || ''));
+            node.children.forEach(sortChildren);
+        }
+    };
+    roots.sort((a, b) => (a.displayName || '').localeCompare(b.displayName || ''));
+    roots.forEach(sortChildren);
+    return roots;
+}
+
+function renderOrgUnitTree(tree) {
+    const container = document.getElementById('orgUnitTree');
+    const fragment  = document.createDocumentFragment();
+    tree.forEach(ou => fragment.appendChild(createOrgUnitNode(ou)));
+    container.innerHTML = '';
+    container.appendChild(fragment);
+}
+
+function createOrgUnitNode(orgUnit) {
+    const div = document.createElement('div');
+    const itemDiv = document.createElement('div');
+    const isFacilityLevel = orgUnit.level === facilityLevel;
+    itemDiv.className = `org-unit-item ${isFacilityLevel ? 'facility-level' : ''}`;
+    itemDiv.dataset.id    = orgUnit.id;
+    itemDiv.dataset.level = orgUnit.level;
+
+    const toggle = document.createElement('span');
+    toggle.className = 'org-unit-toggle';
+    if (orgUnit.children && orgUnit.children.length > 0) {
+        toggle.textContent = '▶';
+        toggle.onclick = (e) => { e.stopPropagation(); toggleOrgUnit(orgUnit.id); };
+    } else {
+        toggle.textContent = '  ';
+        toggle.style.cursor = 'default';
+    }
+    itemDiv.appendChild(toggle);
+
+    const checkbox = document.createElement('input');
+    checkbox.type      = 'checkbox';
+    checkbox.className = 'org-unit-checkbox';
+    checkbox.dataset.id = orgUnit.id;
+    checkbox.checked   = selectedOrgUnits.has(orgUnit.id);
+    checkbox.onchange  = (e) => { e.stopPropagation(); toggleOrgUnitSelection(orgUnit.id, e.target.checked); };
+    itemDiv.appendChild(checkbox);
+
+    const badge = document.createElement('span');
+    badge.className = 'level-badge';
+    badge.textContent = isFacilityLevel ? 'HF' : `L${orgUnit.level}`;
+    badge.title = isFacilityLevel ? 'Health Facility Level' : `Level ${orgUnit.level}`;
+    itemDiv.appendChild(badge);
+
+    const label = document.createElement('span');
+    label.className = 'org-unit-label';
+    label.textContent = orgUnit.displayName;
+    label.onclick = () => { checkbox.checked = !checkbox.checked; toggleOrgUnitSelection(orgUnit.id, checkbox.checked); };
+    itemDiv.appendChild(label);
+
+    if (!isFacilityLevel && orgUnit.children && orgUnit.children.length > 0) {
+        const facilityCount = countFacilitiesUnder(orgUnit);
+        if (facilityCount > 0) {
+            const countBadge = document.createElement('span');
+            countBadge.style.cssText = 'background:#17a2b8;color:white;padding:1px 6px;border-radius:10px;font-size:10px;margin-left:auto;';
+            countBadge.textContent = `${facilityCount} HFs`;
+            itemDiv.appendChild(countBadge);
+        }
+    }
+
+    if (selectedOrgUnits.has(orgUnit.id)) itemDiv.classList.add('selected');
+    div.appendChild(itemDiv);
+
+    if (orgUnit.children && orgUnit.children.length > 0) {
+        const childrenDiv = document.createElement('div');
+        childrenDiv.className = 'org-unit-children';
+        childrenDiv.id = `children-${orgUnit.id}`;
+        orgUnit.children.forEach(child => childrenDiv.appendChild(createOrgUnitNode(child)));
+        div.appendChild(childrenDiv);
+    }
+    return div;
+}
+
+function countFacilitiesUnder(orgUnit) {
+    if (orgUnit.level === facilityLevel) return 1;
+    let count = 0;
+    if (orgUnit.children) orgUnit.children.forEach(child => { count += countFacilitiesUnder(child); });
+    return count;
+}
+
+function toggleOrgUnit(id) {
+    const childrenDiv = document.getElementById(`children-${id}`);
+    const toggle      = document.querySelector(`[data-id="${id}"] .org-unit-toggle`);
+    if (childrenDiv.classList.contains('expanded')) {
+        childrenDiv.classList.remove('expanded'); toggle.textContent = '▶';
+    } else {
+        childrenDiv.classList.add('expanded'); toggle.textContent = '▼';
+    }
+}
+
+function toggleOrgUnitSelection(id, selected) {
+    const item = document.querySelector(`.org-unit-item[data-id="${id}"]`);
+    if (!item) return;
+    if (selected) { selectedOrgUnits.add(id); item.classList.add('selected'); }
+    else          { selectedOrgUnits.delete(id); item.classList.remove('selected'); }
+    const checkbox = item.querySelector('.org-unit-checkbox');
+    if (checkbox) checkbox.checked = selected;
+}
+
+function getAllFacilitiesUnder(orgUnitId, validFacilityIds) {
+    const facilities = [];
+    const orgUnit = allOrgUnitsData.find(ou => ou.id === orgUnitId);
+    if (!orgUnit) return facilities;
+    if (orgUnit.level === facilityLevel) {
+        if (validFacilityIds.has(orgUnitId)) facilities.push(orgUnitId);
+        return facilities;
+    }
+    function findFacilities(parentId) {
+        const children = allOrgUnitsData.filter(ou => ou.parent && ou.parent.id === parentId);
+        children.forEach(child => {
+            if (child.level === facilityLevel) {
+                if (validFacilityIds.has(child.id)) facilities.push(child.id);
+            } else if (child.level < facilityLevel) {
+                findFacilities(child.id);
+            }
+        });
+    }
+    findFacilities(orgUnitId);
+    return facilities;
+}
+
+// ── FIX: use a Set throughout so UIDs are always unique regardless of
+// how many org unit ancestors were selected that share facilities.
+function expandSelectionToFacilities() {
+    const allFacilityIds   = new Set();
+    const validFacilityIds = new Set();
+    const filterActive     = selectedGroupOptions.size > 0;
+
+    // Build the set of valid (optionally filtered) facility IDs
+    // ── Filter is now name-based (ou.hfType) — same as Age Disaggregation tool
+    allOrgUnitsData.forEach(ou => {
+        if (ou.level !== facilityLevel) return;
+        if (!filterActive) {
+            validFacilityIds.add(ou.id);
+        } else {
+            // selectedGroupOptions now contains type name strings ('Hospital', 'CHP', etc.)
+            if (selectedGroupOptions.has(ou.hfType)) {
+                validFacilityIds.add(ou.id);
+            }
+        }
+    });
+
+    // Walk every selected org unit and collect all facilities beneath it
+    selectedOrgUnits.forEach(ouId => {
+        const ou = allOrgUnitsData.find(o => o.id === ouId);
+        if (ou && ou.level === facilityLevel) {
+            if (validFacilityIds.has(ouId)) allFacilityIds.add(ouId);
+        } else {
+            getAllFacilitiesUnder(ouId, validFacilityIds).forEach(fId => allFacilityIds.add(fId));
+        }
+    });
+
+    // Set guarantees uniqueness — convert to array
+    return Array.from(allFacilityIds);
+}
+
+function expandAllOrgUnits() {
+    document.querySelectorAll('.org-unit-children').forEach(d => d.classList.add('expanded'));
+    document.querySelectorAll('.org-unit-toggle').forEach(t => { if (t.textContent === '▶') t.textContent = '▼'; });
+}
+
+function collapseAllOrgUnits() {
+    document.querySelectorAll('.org-unit-children').forEach(d => d.classList.remove('expanded'));
+    document.querySelectorAll('.org-unit-toggle').forEach(t => { if (t.textContent === '▼') t.textContent = '▶'; });
+}
+
+function selectAllFacilities() {
+    document.querySelectorAll('.org-unit-item.facility-level').forEach(item => {
+        const id = item.dataset.id;
+        selectedOrgUnits.add(id);
+        item.classList.add('selected');
+        const cb = item.querySelector('.org-unit-checkbox');
+        if (cb) cb.checked = true;
+    });
+    showNotification(`Selected ${document.querySelectorAll('.org-unit-item.facility-level').length} health facilities`, 'info');
+}
+
+function clearAllOrgUnits() {
+    document.querySelectorAll('.org-unit-checkbox').forEach(cb => cb.checked = false);
+    selectedOrgUnits.clear();
+    document.querySelectorAll('.org-unit-item').forEach(item => item.classList.remove('selected'));
+}
+
+function selectAllAtLevel() {
+    if (allOrgUnitsData.length === 0) { showNotification('Please load organisation units first', 'error'); return; }
+    const levels   = [...new Set(allOrgUnitsData.map(ou => ou.level))].sort((a, b) => a - b);
+    const dropdown = document.getElementById('levelSelectDropdown');
+    dropdown.innerHTML = '';
+    levels.forEach(level => {
+        const count = allOrgUnitsData.filter(ou => ou.level === level).length;
+        const opt   = document.createElement('option');
+        opt.value   = level;
+        opt.textContent = `Level ${level} - ${count} units${level === facilityLevel ? ' (Health Facilities)' : ''}`;
+        dropdown.appendChild(opt);
+    });
+    document.getElementById('levelSelectModal').style.display = 'flex';
+}
+
+function closeLevelModal() { document.getElementById('levelSelectModal').style.display = 'none'; }
+
+function confirmSelectLevel() {
+    const level = parseInt(document.getElementById('levelSelectDropdown').value);
+    document.querySelectorAll(`.org-unit-item[data-level="${level}"]`).forEach(item => {
+        const id = item.dataset.id;
+        selectedOrgUnits.add(id);
+        item.classList.add('selected');
+        const cb = item.querySelector('.org-unit-checkbox');
+        if (cb) cb.checked = true;
+    });
+    const count = document.querySelectorAll(`.org-unit-item[data-level="${level}"]`).length;
+    closeLevelModal();
+    showNotification(`Selected ${count} organisation units at Level ${level}`, 'success');
+}
+
+// ─── PREVIEW ─────────────────────────────────────────────────────────────────
+
+function previewDownload() {
+    showProgress();
+    clearLogs();
+    log('═══════════════════════════════════════', 'info');
+    log('       DOWNLOAD PREVIEW', 'info');
+    log('═══════════════════════════════════════', 'info');
+
+    const selectedDataElementIds = Array.from(selectedDataElements.keys());
+    log(`📊 DATA ELEMENTS: ${selectedDataElementIds.length} selected`, 'info');
+    if (selectedDataElementIds.length === 0) {
+        log('   ⚠️ No data elements selected!', 'error');
+    } else {
+        Array.from(selectedDataElements.values()).slice(0, 5).forEach(de => log(`   - ${de.elementName}`, 'info'));
+        if (selectedDataElementIds.length > 5) log(`   ... and ${selectedDataElementIds.length - 5} more`, 'info');
+    }
+
+    log(`🏥 ORGANISATION UNITS: ${selectedOrgUnits.size} selected`, 'info');
+    const expandedFacilities = expandSelectionToFacilities();
+    log(`📋 UNIQUE FACILITIES TO DOWNLOAD: ${expandedFacilities.length}`, 'success');
+
+    const period = getPeriodFromForm();
+    log(`📅 PERIOD: ${period || '⚠️ Not selected!'}`, period ? 'info' : 'error');
+    if (selectedPeriodsForExport.length > 0) {
+        log(`   ${selectedPeriodsForExport.length} period(s): ${selectedPeriodsForExport.join(', ')}`, 'info');
+    }
+    log('═══════════════════════════════════════', 'info');
+
+    const ready = selectedDataElementIds.length > 0 && expandedFacilities.length > 0 && period;
+    if (ready) {
+        log('✓ Ready to download!', 'success');
+        showNotification(`Preview: ${expandedFacilities.length} unique facilities, ${selectedDataElementIds.length} data elements`, 'success');
+    } else {
+        log('✗ Please complete all selections before downloading', 'error');
+        showNotification('Please complete all selections', 'error');
+    }
+}
+
+// ─── RESET ───────────────────────────────────────────────────────────────────
+
+function resetAllSelections() {
+    selectedDataElements.clear();
+    expandedDatasets.clear();
+    if (datasetsData.length > 0) { renderAvailableItems(datasetsData); renderSelectedItems(); }
+
+    const availableSearch = document.getElementById('availableSearch');
+    if (availableSearch) availableSearch.value = '';
+    const availableSearchWrapper = document.getElementById('availableSearchWrapper');
+    if (availableSearchWrapper) availableSearchWrapper.style.display = 'none';
+    const selectedSearch = document.getElementById('selectedSearch');
+    if (selectedSearch) selectedSearch.value = '';
+
+    selectedOrgUnits.clear();
+    document.querySelectorAll('.org-unit-item').forEach(item => {
+        item.classList.remove('selected');
+        const cb = item.querySelector('.org-unit-checkbox');
+        if (cb) cb.checked = false;
+    });
+
+    selectedGroupOptions.clear();
+    document.querySelectorAll('#groupOptionsList input[type="checkbox"]').forEach(cb => cb.checked = false);
+    const groupSetsContent = document.getElementById('groupSetsContent');
+    if (groupSetsContent) groupSetsContent.style.display = 'none';
+    const loadFacilityTypesBtn = document.getElementById('loadFacilityTypesBtn');
+    if (loadFacilityTypesBtn) loadFacilityTypesBtn.textContent = 'Load Facility Types';
+    const activeFilterBadge = document.getElementById('activeFilterBadge');
+    if (activeFilterBadge) activeFilterBadge.style.display = 'none';
+
+    if (allOrgUnitsData.length > 0 && orgUnitsData.length !== allOrgUnitsData.length) {
+        orgUnitsData = [...allOrgUnitsData];
+        maxOrgUnitLevel = Math.max(...orgUnitsData.map(ou => ou.level));
+        facilityLevel   = determineFacilityLevel();
+        populateFacilityLevelSelector();
+        const tree = buildOrgUnitTree(orgUnitsData);
+        renderOrgUnitTree(tree);
+    }
+
+    document.getElementById('periodMonth').value  = '';
+    document.getElementById('periodStart').value  = '';
+    document.getElementById('periodEnd').value    = '';
+    document.getElementById('quarterYear').value  = '2025';
+    document.getElementById('quarter').value      = 'Q1';
+    document.getElementById('startYear').value    = '';
+    document.getElementById('endYear').value      = '';
+
+    document.getElementById('progressSection').classList.remove('active');
+    document.getElementById('progressFill').style.width = '0%';
+    document.getElementById('progressFill').textContent = '0%';
+    document.getElementById('logContainer').innerHTML = '';
+
+    showNotification('All selections have been reset', 'info');
+}
+
+// ─── DOWNLOAD ────────────────────────────────────────────────────────────────
+
+async function executeDownloadDatasets() {
+    const selectedDataElementIds = Array.from(selectedDataElements.keys());
+    if (selectedDataElementIds.length === 0) { showNotification('Please select at least one data element', 'error'); return; }
+    if (selectedOrgUnits.size === 0)          { showNotification('Please select at least one organisation unit', 'error'); return; }
+
+    const downloadBtn = document.getElementById('downloadDatasetsBtn');
+    if (downloadBtn) { downloadBtn.disabled = true; downloadBtn.textContent = 'Processing...'; }
+    showProgress();
+    clearLogs();
+    setProgress(0);
+
+    try {
+        log(`Processing ${selectedDataElementIds.length} selected data elements...`, 'info');
+        setProgress(5);
+
+        log(`Selected ${selectedOrgUnits.size} organisation unit(s)...`, 'info');
+        selectedOrgUnits.forEach(ouId => {
+            const ou = orgUnitsData.find(o => o.id === ouId);
+            if (ou) log(`  - ${ou.displayName} (Level ${ou.level})`, 'info');
+        });
+
+        const selectedOrgUnitIds = expandSelectionToFacilities();
+        log(`Expanded to ${selectedOrgUnitIds.length} unique health facilities at Level ${facilityLevel}`, 'success');
+        setProgress(10);
+
+        if (selectedOrgUnitIds.length === 0) {
+            showNotification('No health facilities found under selected organisation units', 'error');
+            if (downloadBtn) { downloadBtn.disabled = false; downloadBtn.textContent = '⬇ DOWNLOAD AS EXCEL (.xlsx)'; }
+            return;
+        }
+
+        const dataElementMap = {};
+        selectedDataElements.forEach((info, id) => { dataElementMap[id] = info.elementName; });
+
+        // Build full hierarchy lookup from allOrgUnitsData (unfiltered)
+        const orgUnitMap       = {};
+        const orgUnitHierarchy = {};
+        const hierarchySource  = allOrgUnitsData.length > 0 ? allOrgUnitsData : orgUnitsData;
+        hierarchySource.forEach(ou => {
+            orgUnitMap[ou.id]       = ou.displayName;
+            orgUnitHierarchy[ou.id] = { id: ou.id, name: ou.displayName, level: ou.level, parent: ou.parent ? ou.parent.id : null };
+        });
+
+        const period = getPeriodFromForm();
+        if (!period) {
+            showNotification('Please select a period', 'error');
+            if (downloadBtn) { downloadBtn.disabled = false; downloadBtn.textContent = '⬇ DOWNLOAD AS EXCEL (.xlsx)'; }
+            return;
+        }
+        log(`Period: ${period}`, 'info');
+        log(`Periods to include: ${selectedPeriodsForExport.length}`, 'info');
+
+        // Batch processing
+        const orgUnitBatches = [];
+        for (let i = 0; i < selectedOrgUnitIds.length; i += ORG_UNIT_BATCH_SIZE)
+            orgUnitBatches.push(selectedOrgUnitIds.slice(i, i + ORG_UNIT_BATCH_SIZE));
+
+        const dataElementBatches = [];
+        for (let i = 0; i < selectedDataElementIds.length; i += DATA_ELEMENT_BATCH_SIZE)
+            dataElementBatches.push(selectedDataElementIds.slice(i, i + DATA_ELEMENT_BATCH_SIZE));
+
+        const totalBatches = orgUnitBatches.length * dataElementBatches.length;
+        log(`Splitting into ${totalBatches} batch requests...`, 'info');
+
+        let allDataValues    = [];
+        let completedBatches = 0;
+        let failedBatches    = 0;
+
+        for (let ouBatchIndex = 0; ouBatchIndex < orgUnitBatches.length; ouBatchIndex++) {
+            const ouBatch = orgUnitBatches[ouBatchIndex];
+            for (let deBatchIndex = 0; deBatchIndex < dataElementBatches.length; deBatchIndex++) {
+                const deBatch = dataElementBatches[deBatchIndex];
+                try {
+                    const batchNum = ouBatchIndex * dataElementBatches.length + deBatchIndex + 1;
+                    setProgress(Math.round(15 + (batchNum / totalBatches) * 55));
+                    log(`Batch ${batchNum}/${totalBatches} (${ouBatch.length} facilities, ${deBatch.length} elements)...`, 'info');
+                    const dataUrl  = `${state.config.instanceUrl}/api/dataValueSets.json?dataElement=${deBatch.join(',')}&orgUnit=${ouBatch.join(',')}&${period}`;
+                    const dataResp = await fetchWithAuth(dataUrl);
+                    if (!dataResp.ok) { log(`Batch ${batchNum} failed: ${dataResp.status}`, 'warning'); failedBatches++; continue; }
+                    const batchData = await dataResp.json();
+                    if (batchData.dataValues && batchData.dataValues.length > 0) {
+                        allDataValues = allDataValues.concat(batchData.dataValues);
+                        log(`  Retrieved ${batchData.dataValues.length} values`, 'success');
+                    }
+                    completedBatches++;
+                    if (batchNum < totalBatches) await new Promise(resolve => setTimeout(resolve, 100));
+                } catch (batchError) {
+                    log(`Batch failed: ${batchError.message}`, 'warning');
+                    failedBatches++;
+                }
+            }
+        }
+
+        log(`Retrieved ${allDataValues.length} total data values from ${completedBatches} batches`, 'success');
+        setProgress(75);
+
+        const periodsArray = selectedPeriodsForExport.length > 0 ? selectedPeriodsForExport :
+            [...new Set(allDataValues.map(dv => dv.period))].sort();
+
+        log('Fetching category option combos...', 'info');
+        const categoryOptionComboMap = {};
+        const cocResp = await fetchWithAuth(`${state.config.instanceUrl}/api/categoryOptionCombos.json?fields=id,displayName,name&paging=false`);
+        if (cocResp.ok) {
+            const cocData = await cocResp.json();
+            cocData.categoryOptionCombos?.forEach(coc => {
+                categoryOptionComboMap[coc.id] = coc.displayName || coc.name || coc.id;
+            });
+            log(`Found ${Object.keys(categoryOptionComboMap).length} category combos`, 'info');
+        }
+        setProgress(85);
+
+        log('Building Excel workbook...', 'info');
+        exportToExcel(allDataValues, dataElementMap, orgUnitMap, categoryOptionComboMap, orgUnitHierarchy, selectedOrgUnitIds, periodsArray);
+        setProgress(100);
+
+        log('═══════════════════════════════════════', 'success');
+        log('DOWNLOAD COMPLETE!', 'success');
+        log(`  ${allDataValues.length} data values exported`, 'success');
+        log(`  ${selectedDataElementIds.length} data elements`, 'success');
+        log(`  ${selectedOrgUnitIds.length} unique health facilities`, 'success');
+        log(`  ${periodsArray.length} periods included`, 'success');
+        log('═══════════════════════════════════════', 'success');
+        showNotification('Excel file downloaded successfully!', 'success');
+
+    } catch (error) {
+        log(`ERROR: ${error.message}`, 'error');
+        showNotification(`Error: ${error.message}`, 'error');
+    } finally {
+        if (downloadBtn) { downloadBtn.disabled = false; downloadBtn.textContent = '⬇ DOWNLOAD AS EXCEL (.xlsx)'; }
+    }
+}
+
+// ─── EXCEL EXPORT ────────────────────────────────────────────────────────────
+
+function getAncestorAtLevel(ouId, targetLevel, hierarchy) {
+    let current = hierarchy[ouId];
+    while (current) {
+        if (current.level === targetLevel) return current.name;
+        current = current.parent ? hierarchy[current.parent] : null;
+    }
+    return '';
+}
+
+function getOrgUnitHierarchy(orgUnitId, orgUnitHierarchy) {
+    const hierarchy = [];
+    let current = orgUnitHierarchy[orgUnitId];
+    while (current) {
+        hierarchy.unshift(current.name);
+        current = current.parent ? orgUnitHierarchy[current.parent] : null;
+    }
+    return hierarchy;
+}
+
+function exportToExcel(dataValues, dataElementMap, orgUnitMap, categoryOptionComboMap, orgUnitHierarchy, selectedOrgUnitIds, periodsArray) {
+    log(`Building wide-format Excel: ${selectedOrgUnitIds.length} facilities × ${periodsArray.length} periods...`, 'info');
+
+    // ── Disambiguate facilities that share the same display name ──────────────
+    // When two facilities have the same name, append the name of the
+    // level immediately above the facility level (e.g. chiefdom / area)
+    // in brackets so every row is uniquely identifiable.
+
+    const rawNames = {};
+    selectedOrgUnitIds.forEach(ouId => {
+        rawNames[ouId] = orgUnitMap[ouId] || ouId;
+    });
+
+    // Count occurrences of each raw name across the selected facilities
+    const nameCounts = {};
+    Object.values(rawNames).forEach(n => { nameCounts[n] = (nameCounts[n] || 0) + 1; });
+
+    // Build final display names — only disambiguate where names collide
+    const displayNames = {};
+    selectedOrgUnitIds.forEach(ouId => {
+        const raw = rawNames[ouId];
+        if (nameCounts[raw] > 1) {
+            // Use the parent level name (facilityLevel - 1) as the disambiguator
+            const parentName = getAncestorAtLevel(ouId, facilityLevel - 1, orgUnitHierarchy);
+            displayNames[ouId] = parentName ? `${raw} (${parentName})` : raw;
+        } else {
+            displayNames[ouId] = raw;
+        }
+    });
+
+    const disambiguatedCount = Object.values(displayNames).filter((n, _, arr) => {
+        return arr.filter(x => x === n).length > 1;
+    }).length;
+    if (disambiguatedCount === 0) {
+        log(`All ${selectedOrgUnitIds.length} facility names are unique — no disambiguation needed.`, 'info');
+    } else {
+        log(`Disambiguated facility names — all ${selectedOrgUnitIds.length} names are now unique.`, 'success');
+    }
+    // ─────────────────────────────────────────────────────────────────────────
+
+    // Group data values by orgUnit|period
+    const grouped = {};
+    dataValues.forEach(dv => {
+        const key = `${dv.orgUnit}|${dv.period}`;
+        if (!grouped[key]) grouped[key] = {};
+        const deName  = dataElementMap[dv.dataElement] || dv.dataElement;
+        const cocName = categoryOptionComboMap[dv.categoryOptionCombo] || '';
+        const colName = (cocName && cocName.toLowerCase() !== 'default')
+            ? `${deName} (${cocName})` : deName;
+        grouped[key][colName] = dv.value;
+    });
+
+    // Collect all column names
+    const allCols = new Set();
+    Object.values(grouped).forEach(row => Object.keys(row).forEach(c => allCols.add(c)));
+    if (allCols.size === 0) Object.values(dataElementMap).forEach(n => allCols.add(n));
+    const sortedCols = Array.from(allCols).sort();
+
+    // Hierarchy header columns (Level 1 … Level N)
+    const maxLevel = facilityLevel;
+    const hierarchyHeaders = [];
+    for (let i = 1; i <= maxLevel; i++) hierarchyHeaders.push(`Level ${i}`);
+
+    // Add a dedicated "Facility" column after the hierarchy columns
+    const headers = [...hierarchyHeaders, 'Facility', 'Period', ...sortedCols];
+
+    // Build rows
+    const rows = [];
+    selectedOrgUnitIds.forEach(ouId => {
+        periodsArray.forEach(period => {
+            const key      = `${ouId}|${period}`;
+            const rowData  = grouped[key] || {};
+            const hierarchy = getOrgUnitHierarchy(ouId, orgUnitHierarchy);
+            const row = [];
+
+            // Hierarchy levels
+            for (let i = 0; i < maxLevel; i++) row.push(hierarchy[i] || '');
+
+            // Disambiguated facility name
+            row.push(displayNames[ouId]);
+
+            // Period
+            row.push(period);
+
+            // Data values — numbers stored as numbers so Excel treats them correctly
+            sortedCols.forEach(col => {
+                const val = rowData[col];
+                if (val !== undefined && val !== '' && !isNaN(Number(val))) {
+                    row.push(Number(val));
+                } else {
+                    row.push(val !== undefined ? val : '');
+                }
+            });
+            rows.push(row);
+        });
+    });
+
+    log(`Generated ${rows.length} rows, ${sortedCols.length} data columns`, 'info');
+
+    // Build SheetJS workbook
+    const wb     = XLSX.utils.book_new();
+    const wsData = [headers, ...rows];
+    const ws     = XLSX.utils.aoa_to_sheet(wsData);
+
+    // Column widths
+    const colWidths = headers.map((h, i) => {
+        if (i < maxLevel)           return { wch: 25 };  // hierarchy
+        if (i === maxLevel)         return { wch: 35 };  // Facility (may include disambiguation)
+        if (i === maxLevel + 1)     return { wch: 12 };  // Period
+        return { wch: Math.max(h.length + 2, 15) };      // data columns
+    });
+    ws['!cols'] = colWidths;
+
+    XLSX.utils.book_append_sheet(wb, ws, 'Dataset Export');
+
+    const filename = `dataset-export-${new Date().toISOString().split('T')[0]}.xlsx`;
+    XLSX.writeFile(wb, filename);
+    log(`Excel file "${filename}" saved.`, 'success');
+}
+
+// ─── LOGIN ───────────────────────────────────────────────────────────────────
+
+document.getElementById('loginForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const instanceUrl = document.getElementById('instanceUrl').value.trim().replace(/\/$/, '');
+    const username    = document.getElementById('username').value.trim();
+    const password    = document.getElementById('password').value.trim();
+
+    const submitBtn = e.target.querySelector('.btn-primary');
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Connecting... 0%';
+
+    const config = { instanceUrl, username, password };
+    try {
+        submitBtn.textContent = 'Connecting... 30%';
+        showNotification('Connecting via proxy...', 'info');
+        const testUrl    = `${instanceUrl}/api/me`;
+        const authHeader = 'Basic ' + btoa(`${username}:${password}`);
+        submitBtn.textContent = 'Connecting... 60%';
+        const response = await makeProxyRequest(testUrl, { method: 'GET', headers: { 'Authorization': authHeader } });
+        submitBtn.textContent = 'Connecting... 90%';
+        if (response.ok) {
+            const userData    = await response.json();
+            state.config      = config;
+            state.isLoggedIn  = true;
+            submitBtn.textContent = 'Connected!';
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('mainContent').classList.add('active');
+            const fullName = `${userData.firstName || ''} ${userData.surname || ''}`.trim() || 'User';
+            showNotification(`Connected successfully! Welcome ${fullName}`, 'success');
+        } else if (response.status === 401) {
+            showNotification('Invalid username or password', 'error');
+        } else {
+            showNotification(`Authentication failed (${response.status})`, 'error');
+        }
+    } catch (error) {
+        showNotification(`Connection failed: ${error.message}`, 'error');
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Connect to DHIS2';
+    }
+});
+</script>
+</body>
+</html>
