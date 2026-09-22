@@ -122,7 +122,7 @@ html,body{width:100%;min-height:100vh;font-family:'Segoe UI',Roboto,Arial,sans-s
         <div style="font-size:12px;color:#2c4b62;line-height:1.75;">
 
           <div style="background:var(--blue-lt);border-radius:8px;padding:14px 16px;margin-bottom:18px;">
-            <strong style="color:var(--blue);">Purpose.</strong> This tool extracts <strong>weekly</strong> surveillance data reported through the eIDSR (electronic Integrated Disease Surveillance and Response) system — clinical, confirmed-positive and tested malaria — for every health facility in the DHIS2 platform (apart from the exclusions below), cleans it, and produces analysis-ready tables. Every step below is applied automatically on each run.
+            <strong style="color:var(--blue);">Purpose.</strong> This tool extracts <strong>weekly</strong> surveillance data reported through the eIDSR (electronic Integrated Disease Surveillance and Response) system — clinical, confirmed-positive and tested malaria — for every Hospital, Clinic, CHC, CHP and MCHP in the DHIS2 platform, cleans it, and produces analysis-ready tables. Every step below is applied automatically on each run.
           </div>
 
           <div class="m-step"><div class="m-num">1</div><div>
@@ -137,7 +137,7 @@ html,body{width:100%;min-height:100vh;font-family:'Segoe UI',Roboto,Arial,sans-s
               <li><strong>A laboratory</strong> (name contains "Laboratory"). These are not health facilities, yet many are typed <em>Hospital</em> in the source, which would inflate the Hospital count.</li>
               <li><strong>A Marie Stopes facility</strong> — excluded by NMCP request (specialised SRH provider).</li>
             </ul>
-            Facility types are normalised to five categories: <strong>Hospital, Clinic, CHC, CHP, MCHP</strong>. Misspellings are folded in ("Climic" → Clinic), as are nursing homes ("Home" → Clinic). A facility whose type cannot be read from its name is still kept, typed <strong>Other</strong>.
+                        Only the five health facility types are kept, and the rule is <strong>strict</strong>: the <strong>last word</strong> of the facility name must be exactly <strong>Hospital, Clinic, CHC, CHP or MCHP</strong>. The one exception is <strong>Clinic</strong>: a name that contains the word Clinic anywhere is kept as a Clinic (for example "St John Clinic and Nursing Home"). Misspellings (such as "Climic") and names ending in "Home" without the word Clinic are excluded. Facilities with the same name under different parents (chiefdom or district) are separate facilities and <strong>both are included</strong>, because each is identified by its own OU ID.
             <div class="m-note">The full list of excluded facilities, with the reason for each, is shown and downloadable after the run.</div>
           </div></div>
 
@@ -194,7 +194,7 @@ html,body{width:100%;min-height:100vh;font-family:'Segoe UI',Roboto,Arial,sans-s
             <div class="m-formula">
               <strong>Reporting rate = (facilities reporting eIDSR that week ÷ ACTIVE facilities in that group) × 100</strong>
             </div>
-            Computed per week, broken down by <strong>facility type</strong> (CHC, CHP, MCHP, Hospital, Clinic, Other).
+            Computed per week, broken down by <strong>facility type</strong> (CHC, CHP, MCHP, Hospital, Clinic).
           </div></div>
 
           <div class="m-step"><div class="m-num">8</div><div>
@@ -204,11 +204,12 @@ html,body{width:100%;min-height:100vh;font-family:'Segoe UI',Roboto,Arial,sans-s
           </div></div>
 
           <div class="m-step"><div class="m-num">9</div><div>
-            <div class="m-title">Compute epidemic thresholds <span class="m-tag">4 methods · week specific</span></div>
+            <div class="m-title">Compute epidemic thresholds <span class="m-tag">5 methods · week specific</span></div>
             Thresholds are built separately for <strong>each facility</strong>, <strong>each series</strong> (Clinical, Confirmed Positive and Tested, split by &lt;5y, 5+y and Combined, for Cases and for Deaths) and <strong>each epi week</strong>. For monitoring week <em>w</em>, the baseline set is the value that facility reported in week <em>w</em> of every baseline year. With 2021 to 2025 as the baseline, week 10 of 2026 is judged against week 10 of 2021, 2022, 2023, 2024 and 2025, so the normal seasonal rise in the rainy season is built into the threshold.
             <table class="m-tbl" style="margin-top:8px;">
               <tr><th>Method</th><th>Threshold</th></tr>
               <tr><td>Upper quartile (Q3)</td><td>The 75th percentile of the baseline set, which is the upper bound of the interquartile range</td></tr>
+              <tr><td>95th percentile (P95)</td><td>The value below which 95% of the baseline set falls</td></tr>
               <tr><td>Mean</td><td>The average of the baseline set (the C-SUM style line)</td></tr>
               <tr><td>Mean + 2 SD</td><td>Average plus two standard deviations</td></tr>
               <tr><td>Mean + 3 SD</td><td>Average plus three standard deviations</td></tr>
@@ -216,19 +217,19 @@ html,body{width:100%;min-height:100vh;font-family:'Segoe UI',Roboto,Arial,sans-s
             <ul class="m-list">
               <li>A monitoring week is flagged for a method when its value is <strong>greater than</strong> that method's threshold.</li>
               <li>Weeks a facility did not report are left out of the baseline set rather than counted as zero, so reporting gaps do not pull the threshold down.</li>
-              <li>One baseline value is enough. With a single value the SD is 0, so all four thresholds equal that value.</li>
+              <li>One baseline value is enough. With a single value the SD is 0, so all five thresholds equal that value.</li>
               <li>If a week has no baseline value at all, the threshold is borrowed from the <strong>nearest earlier week</strong> (for week 5, check W4, then W3, down to W1). If no earlier week has a value, the <strong>nearest later week</strong> is used (W6, W7, up to W53). The week used is shown in the Baseline Week Used column.</li>
               <li>If the facility has no baseline value for that series in any week, every threshold is set to <strong>0</strong> so the line can still be plotted, and the week is marked No baseline instead of being flagged.</li>
               <li> Week 53 uses week 52 of the baseline years when a baseline year has no week 53.</li>
               <li>The standard deviation is the sample SD (n minus 1), and Q3 uses linear interpolation, matching R <code>quantile(type = 7)</code> and pandas.</li>
             </ul>
-            <div class="m-note"><strong>How the four compare.</strong> The Mean line is the most sensitive and flags the most weeks, so it works as an early warning. Q3 sits a little higher and is the method many malaria programmes use when only a few baseline years exist. Mean + 2 SD is the usual alert line, and Mean + 3 SD is the strictest, flagging only clear departures from normal. All four are computed on every run; the Epidemic Threshold tab lets you switch between them.</div>
+            <div class="m-note"><strong>How the five compare.</strong> The Mean line is the most sensitive and flags the most weeks, so it works as an early warning. Q3 sits a little higher and is the method many malaria programmes use when only a few baseline years exist, while P95 sits close to the top of the baseline and only flags weeks higher than almost every past value for that week. Mean + 2 SD is the usual alert line, and Mean + 3 SD is the strictest, flagging only clear departures from normal. All five are computed on every run; the Epidemic Threshold tab lets you switch between them.</div>
             <div class="m-note"><strong>Testing the thresholds on past years.</strong> The Year filter on the Epidemic Threshold tab also lists each baseline year. Choosing one applies the same week specific thresholds to every week of that year, so you can see how often each method would have flagged in a normal year. Because that year is itself part of the baseline, this is an in sample check: the Mean line will naturally be crossed in roughly half of the weeks, while Mean + 2 SD and Mean + 3 SD should rarely be crossed if they are well calibrated.</div>
           </div></div>
 
           <div class="m-step"><div class="m-num">10</div><div>
             <div class="m-title">Produce the outputs</div>
-            The monitoring file has one row per facility per week. Each series carries its <strong>value</strong>, the <strong>baseline N</strong>, the four thresholds (<strong>Q3, Mean, Mean + 2 SD, Mean + 3 SD</strong>), the <strong>baseline SD</strong>, and an <strong>Above threshold</strong> column that lists every method the week exceeded. The baseline data (raw weekly values for the baseline years) downloads separately, as do the flagged weeks. Other analyses include weekly reporting rates by facility type, facility activity, excluded facilities and yearly totals, all for the monitoring period and all downloadable as CSV or Excel.
+            The monitoring file has one row per facility per week. Each series carries its <strong>value</strong>, the <strong>baseline N</strong>, the five thresholds (<strong>Q3, P95, Mean, Mean + 2 SD, Mean + 3 SD</strong>), the <strong>baseline SD</strong>, and an <strong>Above threshold</strong> column that lists every method the week exceeded. The baseline data (raw weekly values for the baseline years) downloads separately, as do the flagged weeks. Other analyses include weekly reporting rates by facility type, facility activity, excluded facilities and yearly totals, all for the monitoring period and all downloadable as CSV or Excel.
           </div></div>
 
         </div>
@@ -241,8 +242,8 @@ html,body{width:100%;min-height:100vh;font-family:'Segoe UI',Roboto,Arial,sans-s
         <strong>Dataset:</strong> IDSR Weekly Disease Report <code>rq0LNr72Ndo</code> (Weekly)<br>
         <strong>Data elements:</strong> EIDSR Total Clinical Malaria cases <code>KnYtrL5s7vH</code> · EIDSR Total Malaria cases positive <code>wWScmbz9N2G</code> · EIDSR Total Malaria cases tested <code>RZstMMX0Mnl</code><br>
         <strong>Category option combos:</strong> &lt;5y cases <code>e079rjYqlMH</code> · &lt;5y deaths <code>C5qLGpw4uet</code> · 5+y cases <code>jpmVF8rhBNA</code> · 5+y deaths <code>Ciavs7v4qYa</code><br>
-        <strong>Facilities:</strong> every Level-5 facility in DHIS2, identified by OU ID (same name under a different parent is a separate facility). Only laboratories and Marie Stopes are excluded.<br>
-        <strong>Epidemic threshold:</strong> learnt from the <strong>baseline years</strong> and applied to the <strong>monitoring weeks</strong>, per facility, per series and per epi week, using four methods: <strong>Upper quartile (Q3)</strong>, <strong>Mean</strong>, <strong>Mean + 2 SD</strong> and <strong>Mean + 3 SD</strong>. No values are altered, they are only flagged.
+        <strong>Facilities:</strong> every Level-5 facility in DHIS2, identified by OU ID (same name under a different parent is a separate facility). Only the 5 types are kept (Hospital, Clinic, CHC, CHP, MCHP); laboratories, Marie Stopes and every other type are excluded.<br>
+        <strong>Epidemic threshold:</strong> learnt from the <strong>baseline years</strong> and applied to the <strong>monitoring weeks</strong>, per facility, per series and per epi week, using five methods: <strong>Upper quartile (Q3)</strong>, <strong>95th percentile (P95)</strong>, <strong>Mean</strong>, <strong>Mean + 2 SD</strong> and <strong>Mean + 3 SD</strong>. No values are altered, they are only flagged.
       </div>
 
       <div style="font-size:12px;font-weight:800;color:var(--blue-dk);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px;">1 · Baseline years (used to set the thresholds)</div>
@@ -320,7 +321,7 @@ html,body{width:100%;min-height:100vh;font-family:'Segoe UI',Roboto,Arial,sans-s
         <div class="dl-card">
           <div class="dl-card-head" style="background:var(--blue);">Facility Weekly Data</div>
           <div class="dl-card-body">
-            <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">Monitoring weeks. One row per facility per week. Each of the 18 series (Clinical/Positive/Tested × &lt;5y/5+y/Combined × Cases/Deaths) carries its <strong>value, baseline N, Q3, Mean, Mean + 2 SD, Mean + 3 SD, baseline SD</strong> and the <strong>methods it exceeded</strong>.</div>
+            <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">Monitoring weeks. One row per facility per week. Each of the 18 series (Clinical/Positive/Tested × &lt;5y/5+y/Combined × Cases/Deaths) carries its <strong>value, baseline N, Q3, P95, Mean, Mean + 2 SD, Mean + 3 SD, baseline SD</strong> and the <strong>methods it exceeded</strong>.</div>
             <button class="btn btn-primary" onclick="downloadCSV('facility')">↓ Facility CSV</button>
             <button class="btn btn-outline" onclick="downloadExcel('facility')">↓ Facility Excel</button>
           </div>
@@ -336,7 +337,7 @@ html,body{width:100%;min-height:100vh;font-family:'Segoe UI',Roboto,Arial,sans-s
         <div class="dl-card">
           <div class="dl-card-head" style="background:#1a3a5c;">Reproducible Code</div>
           <div class="dl-card-body">
-            <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">R and Python scripts that reproduce the same fetch and the four week specific threshold methods (Q3, Mean, Mean + 2 SD, Mean + 3 SD).</div>
+            <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">R and Python scripts that reproduce the same fetch and the five week specific threshold methods (Q3, P95, Mean, Mean + 2 SD, Mean + 3 SD).</div>
             <button class="btn btn-outline" onclick="downloadR()">↓ R Script (.R)</button>
             <button class="btn btn-outline" onclick="downloadPy()">↓ Python Script (.py)</button>
           </div>
@@ -365,7 +366,7 @@ html,body{width:100%;min-height:100vh;font-family:'Segoe UI',Roboto,Arial,sans-s
             <button class="btn btn-outline btn-sm" onclick="downloadExcluded('xlsx')">↓ Excel</button>
           </div>
         </div>
-        <div style="font-size:11px;color:var(--muted);margin-bottom:10px;line-height:1.6;">Facilities removed from the extract before any data was fetched: <strong>laboratories</strong> (not health facilities) and <strong>Marie Stopes</strong> (excluded by NMCP). Every other facility in the platform is kept.</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:10px;line-height:1.6;">Facilities removed from the extract before any data was fetched: <strong>laboratories</strong> (not health facilities), <strong>Marie Stopes</strong> (excluded by NMCP), and <strong>any facility that is not one of the 5 types</strong> (Hospital, Clinic, CHC, CHP, MCHP). Each row shows the reason.</div>
         <div id="exclStats" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;"></div>
         <div id="exclBody"></div>
       </div>
@@ -419,7 +420,7 @@ html,body{width:100%;min-height:100vh;font-family:'Segoe UI',Roboto,Arial,sans-s
 
       <div style="background:var(--blue-lt);border-radius:8px;padding:14px 16px;margin-bottom:16px;font-size:12px;color:var(--blue-dk);line-height:1.75;">
         <strong>Method: week specific thresholds from the baseline years</strong><br>
-        For each facility, series and epi week, the same week in every baseline year (<span id="epiBaseTxt">baseline</span>) forms the baseline set. Four thresholds come from that set: <strong>Upper quartile (Q3)</strong>, <strong>Mean</strong>, <strong>Mean + 2 SD</strong> and <strong>Mean + 3 SD</strong>. Each monitoring week (<span id="epiMonTxt">monitoring</span>) is flagged for a method when its value is above that method's threshold. One baseline value is enough. A week with no baseline borrows the nearest earlier week, or failing that the nearest later week; with no baseline at all the threshold is 0 and the week is not flagged. Pick the method below to change the threshold line on the charts.
+        For each facility, series and epi week, the same week in every baseline year (<span id="epiBaseTxt">baseline</span>) forms the baseline set. Five thresholds come from that set: <strong>Upper quartile (Q3, 75th percentile)</strong>, <strong>95th percentile (P95)</strong>, <strong>Mean</strong>, <strong>Mean + 2 SD</strong> and <strong>Mean + 3 SD</strong>. Each monitoring week (<span id="epiMonTxt">monitoring</span>) is flagged for a method when its value is above that method's threshold. One baseline value is enough. A week with no baseline borrows the nearest earlier week, or failing that the nearest later week; with no baseline at all the threshold is 0 and the week is not flagged. Pick the method below to change the threshold line on the charts.
       </div>
 
       <!-- Year filter: monitoring year(s) = weeks under review; baseline years = every week, tested against the same thresholds -->
@@ -440,7 +441,8 @@ html,body{width:100%;min-height:100vh;font-family:'Segoe UI',Roboto,Arial,sans-s
           <option value="Tested">Malaria Tested</option>
         </select>
         <select class="form-control" id="tsMethod" style="width:auto;font-weight:700;" onchange="renderTimeSeries()">
-          <option value="q3">Upper quartile (Q3)</option>
+          <option value="q3">Upper quartile (Q3, 75th percentile)</option>
+          <option value="p95">95th percentile (P95)</option>
           <option value="mean">Mean</option>
           <option value="m2sd" selected>Mean + 2 SD</option>
           <option value="m3sd">Mean + 3 SD</option>
@@ -508,6 +510,7 @@ html,body{width:100%;min-height:100vh;font-family:'Segoe UI',Roboto,Arial,sans-s
         <select class="form-control" id="epiStatus" style="width:auto;" onchange="renderEpi()">
           <option value="">Above any method</option>
           <option value="q3">Above Q3</option>
+          <option value="p95">Above P95</option>
           <option value="mean">Above Mean</option>
           <option value="m2sd">Above Mean + 2 SD</option>
           <option value="m3sd">Above Mean + 3 SD</option>
@@ -608,6 +611,7 @@ function getOwnership(chiefdom,facility){
 // ── EXCLUSION RULES ──────────────────────────────────────────
 function isLaboratory(name){return /\bLABORATOR/i.test(name||'');}
 function isMarieStopes(name){return /MARIE\s*STOPES/i.test(name||'');}
+const HF_TYPES=['Hospital','Clinic','CHC','CHP','MCHP'];
 function exclusionReason(name){
   if(isLaboratory(name))   return 'Laboratory — not a health facility';
   if(isMarieStopes(name))  return 'Marie Stopes — excluded by NMCP request';
@@ -619,7 +623,6 @@ function normType(t){
   if(u==='CHC')return 'CHC';if(u==='CHP')return 'CHP';
   const cs=['CLINIC','CLINNIC','CLINNC','CLIMIC','CLINC','CLINIK','CLENIC','CLINCC','CLIN'];
   if(cs.includes(u))return 'Clinic';
-  if(u==='HOME')return 'Clinic';
   return 'Other';
 }
 // ── State ─────────────────────────────────────────────────────
@@ -640,15 +643,15 @@ async function dhis2(path,retries=3){
   throw new Error('DHIS2 failed: '+(lastErr?.message||'network'));
 }
 function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
+// STRICT: the type is the last word of the facility name, and it must be exactly
+// one of HOSPITAL, CLINIC, CHC, CHP, MCHP. One exception: a name that contains the
+// whole word CLINIC anywhere (e.g. "St John Clinic and Nursing Home") is a Clinic.
+// No misspellings. Anything else is 'Other' and is excluded.
 function getHFType(n){
-  const u=(n||'').toUpperCase(),pts=u.trim().split(/\s+/),suf=pts[pts.length-1]||'';
-  if(suf==='HOSPITAL')return 'Hospital';if(suf==='MCHP')return 'MCHP';
-  if(suf==='CHC')return 'CHC';if(suf==='CHP')return 'CHP';
-  const cs=['CLINIC','CLINNIC','CLINNC','CLIMIC','CLINC','CLINIK','CLENIC','CLINCC','CLIN'];
-  if(cs.includes(suf)||cs.some(c=>u.includes(c)))return 'Clinic';
-  if(suf==='HOME'||u.includes('NURSING HOME'))return 'Clinic';
-  if(u.includes('HOSPITAL'))return 'Hospital';if(u.includes('MCHP'))return 'MCHP';
-  if(u.includes('CHC'))return 'CHC';if(u.includes('CHP'))return 'CHP';
+  const pts=(n||'').toUpperCase().trim().split(/\s+/), suf=pts[pts.length-1]||'';
+  const t=({HOSPITAL:'Hospital',CLINIC:'Clinic',CHC:'CHC',CHP:'CHP',MCHP:'MCHP'})[suf];
+  if(t)return t;
+  if(pts.includes('CLINIC'))return 'Clinic';
   return 'Other';
 }
 function setPill(t,bg){const el=document.getElementById('headerPill');el.textContent=t;el.style.background=bg||'rgba(255,255,255,.15)';}
@@ -1022,7 +1025,7 @@ async function startPipeline(resume){
   addStep('s_base', `Fetch baseline eIDSR · ${baseFrom} to ${baseTo} · ${baseWeeks.length} week(s)`);
   addStep('s_fetch',`Fetch monitoring eIDSR · ${cfgS} → ${cfgE} · ${weeks.length} week(s)`);
   addStep('s_build','Build output rows · facility weekly grid for baseline and monitoring');
-  addStep('s_epi',  'Compute week specific thresholds (Q3, Mean, Mean + 2 SD, Mean + 3 SD)');
+  addStep('s_epi',  'Compute week specific thresholds (Q3, P95, Mean, Mean + 2 SD, Mean + 3 SD)');
 
   try{
     // ── S1: Org Units ─────────────────────────────────────────
@@ -1039,6 +1042,8 @@ async function startPipeline(resume){
         district:dist?dist.displayName:'',chiefdom:chief?chief.displayName:''};
       const reason=exclusionReason(ou.displayName);
       if(reason){ST.excluded.push({...rec,reason});return;}
+      // Only the 5 health facility types are kept; everything else is excluded
+      if(!HF_TYPES.includes(t)){ST.excluded.push({...rec,reason:'Not one of the 5 facility types (Hospital, Clinic, CHC, CHP, MCHP)'});return;}
       ST.ouHierarchy[ou.id]={id:ou.id,name:ou.displayName,hfType:t,
         districtName:rec.district,chiefdomName:rec.chiefdom};
     });
@@ -1147,7 +1152,6 @@ async function startPipeline(resume){
       `<div class="stat-pill">Clinical: ${totalClin.toLocaleString()} · Positive: ${totalPos.toLocaleString()} · Tested: ${totalTest.toLocaleString()} · Deaths (all): ${totalDeaths.toLocaleString()}</div>`,
       methodPills,
       `<div class="stat-pill ok">${totalFacilities.toLocaleString()} facilities in platform (by OU ID) · ${(ST.excluded||[]).length} excluded</div>`,
-      (()=>{const c={};Object.values(ST.ouHierarchy||{}).forEach(ou=>{const o=getOwnership(ou.chiefdomName,ou.name);c[o]=(c[o]||0)+1;});return `<div class="stat-pill">Ownership: ${(c.Public||0).toLocaleString()} Public · ${(c.Private||0).toLocaleString()} Private · ${(c.TBD||0).toLocaleString()} TBD</div>`;})(),
     ].join('');
     document.getElementById('epiBaseTxt').textContent=`${ST.baseFrom} to ${ST.baseTo}`;
     document.getElementById('epiMonTxt').textContent=`${ST.cfgStart} to ${ST.cfgEnd}`;
@@ -1260,10 +1264,11 @@ function downloadExcel(type){
       ['Baseline years',`${ST.baseFrom} to ${ST.baseTo}`],
       ['Monitoring weeks',`${ST.cfgStart} to ${ST.cfgEnd}`],
       ['Baseline set','For each facility, series and epi week: the value of that same epi week in every baseline year (unreported weeks left out)'],
-      ['Minimum baseline values','1 (one value gives SD 0, so all four thresholds equal that value)'],
+      ['Minimum baseline values','1 (one value gives SD 0, so all five thresholds equal that value)'],
       ['Missing baseline week','Borrow the nearest earlier week (down to W1); if none, the nearest later week (up to W53). Shown in Baseline Week Used'],
       ['No baseline at all','All thresholds set to 0 so the line plots; the week is not flagged'],
       ['Q3','75th percentile of the baseline set (upper bound of the interquartile range, linear interpolation)'],
+      ['P95','95th percentile of the baseline set (linear interpolation)'],
       ['Mean','Average of the baseline set'],
       ['Mean + 2 SD','Average plus 2 sample standard deviations'],
       ['Mean + 3 SD','Average plus 3 sample standard deviations'],
@@ -1421,7 +1426,7 @@ function renderYearly(){
 
 // ═══════════════════════════════════════════════════════════════
 //  EPIDEMIC THRESHOLD · learnt from baseline years, applied to monitoring weeks
-//  Four methods: Q3, Mean, Mean + 2 SD, Mean + 3 SD
+//  Four methods: Q3, P95, Mean, Mean + 2 SD, Mean + 3 SD
 //  Computed per facility, per series and per epi week from that same week
 //  in every baseline year, then attached to EVERY monitoring row.
 // ═══════════════════════════════════════════════════════════════
@@ -1447,7 +1452,8 @@ const EPI_SERIES=[
   {key:'tested_deaths',   label:'Tested Combined Deaths',    field:'total_tested_deaths',   cond:'Tested',   age:'Combined', metric:'Deaths'},
 ];
 const EPI_METHODS=[
-  {id:'q3',   short:'Q3',          label:'Upper quartile (Q3)'},
+  {id:'q3',   short:'Q3',          label:'Upper quartile (Q3, 75th percentile)'},
+  {id:'p95',  short:'P95',         label:'95th percentile (P95)'},
   {id:'mean', short:'Mean',        label:'Mean'},
   {id:'m2sd', short:'Mean + 2 SD', label:'Mean + 2 SD'},
   {id:'m3sd', short:'Mean + 3 SD', label:'Mean + 3 SD'},
@@ -1465,7 +1471,7 @@ function thresholdStats(vals){
   const s=[...vals].sort((a,b)=>a-b);
   const mean=vals.reduce((a,b)=>a+b,0)/n;
   const sd=n>1?Math.sqrt(vals.reduce((a,b)=>a+(b-mean)*(b-mean),0)/(n-1)):0; // sample SD; one value gives SD 0
-  return {n, q3:_r1(quantile(s,0.75)), mean:_r1(mean), sd:_r1(sd), m2sd:_r1(mean+2*sd), m3sd:_r1(mean+3*sd)};
+  return {n, q3:_r1(quantile(s,0.75)), p95:_r1(quantile(s,0.95)), mean:_r1(mean), sd:_r1(sd), m2sd:_r1(mean+2*sd), m3sd:_r1(mean+3*sd)};
 }
 // Baseline pools: ouId|seriesKey|epiWeek -> {year: value} from every baseline year.
 // Only reported, non-blank values are pooled (gaps are not treated as zero).
@@ -1512,7 +1518,7 @@ function statsFor(ouId,sKey,week){
   if(!t){ for(let w=week-1;w>=1&&!t;w--){ t=weekStats(ouId,sKey,w); if(t){src=w;how='earlier week';} } }
   if(!t){ for(let w=week+1;w<=53&&!t;w++){ t=weekStats(ouId,sKey,w); if(t){src=w;how='later week';} } }
   _thrCache[ck] = t ? {...t, srcWeek:src, how, none:false}
-                    : {n:0,q3:0,mean:0,sd:0,m2sd:0,m3sd:0, srcWeek:null, how:'no baseline', none:true};
+                    : {n:0,q3:0,p95:0,mean:0,sd:0,m2sd:0,m3sd:0, srcWeek:null, how:'no baseline', none:true};
   return _thrCache[ck];
 }
 function srcLabel(t){ return !t?'':t.none?'No baseline (0)':t.how==='own week'?`W${t.srcWeek}`:`W${t.srcWeek} (${t.how})`; }
@@ -1557,9 +1563,9 @@ function getEpiFlaggedList(rows){
   list.sort((a,b)=>sev(b)-sev(a)||a.district.localeCompare(b.district)||a.facility.localeCompare(b.facility)||periodCompare(a.period,b.period));
   return list;
 }
-const EPI_HDR=['District','Chiefdom','Facility','OU ID','Type','Ownership','Series','Week','Value','Baseline N','Baseline Week Used','Q3','Mean','Mean + 2 SD','Mean + 3 SD','Baseline SD','Above Threshold'];
+const EPI_HDR=['District','Chiefdom','Facility','OU ID','Type','Ownership','Series','Week','Value','Baseline N','Baseline Week Used','Q3','P95','Mean','Mean + 2 SD','Mean + 3 SD','Baseline SD','Above Threshold'];
 function epiRows(list){
-  return list.map(f=>[f.district,f.chiefdom,f.facility,f.ou_id,f.hfType,f.ownership,f.series,f.period,f.value,f.thr.n,srcLabel(f.thr),f.thr.q3,f.thr.mean,f.thr.m2sd,f.thr.m3sd,f.thr.sd,f.exceeded]);
+  return list.map(f=>[f.district,f.chiefdom,f.facility,f.ou_id,f.hfType,f.ownership,f.series,f.period,f.value,f.thr.n,srcLabel(f.thr),f.thr.q3,f.thr.p95,f.thr.mean,f.thr.m2sd,f.thr.m3sd,f.thr.sd,f.exceeded]);
 }
 // ── Year filter ───────────────────────────────────────────────
 let _flagCache={};
@@ -1621,7 +1627,7 @@ function renderEpi(){
     const rowStyle=top?'background:#fdecea;':'';
     const statusStyle=top?'font-weight:800;color:#dc2626;':'font-weight:800;color:#b45309;';
     const cell=(id,v)=>`<td style="${f.flags[id]?'font-weight:800;':''}">${v}</td>`;
-    return `<tr style="${rowStyle}"><td>${f.district}</td><td>${f.chiefdom}</td><td>${f.facility}</td><td>${f.ou_id}</td><td>${f.hfType}</td><td>${f.ownership}</td><td>${f.series}</td><td>${f.period}</td><td><strong>${f.value}</strong></td><td>${f.thr.n}</td><td>${srcLabel(f.thr)}</td>${cell('q3',f.thr.q3)}${cell('mean',f.thr.mean)}${cell('m2sd',f.thr.m2sd)}${cell('m3sd',f.thr.m3sd)}<td>${f.thr.sd}</td><td style="${statusStyle}">${f.exceeded}</td></tr>`;
+    return `<tr style="${rowStyle}"><td>${f.district}</td><td>${f.chiefdom}</td><td>${f.facility}</td><td>${f.ou_id}</td><td>${f.hfType}</td><td>${f.ownership}</td><td>${f.series}</td><td>${f.period}</td><td><strong>${f.value}</strong></td><td>${f.thr.n}</td><td>${srcLabel(f.thr)}</td>${cell('q3',f.thr.q3)}${cell('p95',f.thr.p95)}${cell('mean',f.thr.mean)}${cell('m2sd',f.thr.m2sd)}${cell('m3sd',f.thr.m3sd)}<td>${f.thr.sd}</td><td style="${statusStyle}">${f.exceeded}</td></tr>`;
   }).join('')+(list.length>500?`<tr><td colspan="${EPI_HDR.length}" style="text-align:center;color:var(--muted);">Showing the first 500 of ${list.length.toLocaleString()} rows. Download for the full list.</td></tr>`:'');
 }
 function downloadEpi(fmt){
@@ -1768,7 +1774,7 @@ function _scriptHeader(){
 # COCs: <5y cases (e079rjYqlMH), <5y deaths (C5qLGpw4uet), 5+y cases (jpmVF8rhBNA), 5+y deaths (Ciavs7v4qYa)
 # Thresholds: per facility, per series, per epi week. The baseline set for week w is the value of
 #   week w in every baseline year (unreported weeks left out; W53 falls back to W52 in 52 week years).
-#   Q3 = 75th percentile (type 7), Mean, Mean + 2 SD, Mean + 3 SD (sample SD). Needs >= 1 baseline value (SD 0 when only one).
+#   Q3 = 75th percentile, P95 = 95th percentile (type 7), Mean, Mean + 2 SD, Mean + 3 SD (sample SD). Needs >= 1 baseline value (SD 0 when only one).
 #   A week with no baseline borrows the nearest earlier week, else the nearest later week; none at all = 0, not flagged.
 #   A monitoring week is flagged for a method when value > threshold.
 `};
@@ -1828,6 +1834,7 @@ base_all <- bind_rows(base, base53)
 thr <- base_all |> group_by(ou_id, series, week) |>
   summarise(baseline_n=n(),
             q3   = round(quantile(value, 0.75, type=7), 1),
+            p95  = round(quantile(value, 0.95, type=7), 1),
             mean = round(mean(value), 1),
             sdv  = ifelse(n() > 1, sd(value), 0),
             mean_2sd = round(mean(value) + 2*sdv, 1),
@@ -1836,13 +1843,13 @@ thr <- base_all |> group_by(ou_id, series, week) |>
 
 # Weeks with no baseline: nearest earlier week first (fill down), then nearest later week (fill up)
 thr <- thr |> group_by(ou_id, series) |> complete(week = 1:53) |> arrange(week, .by_group=TRUE) |>
-  fill(baseline_n, q3, mean, sd, mean_2sd, mean_3sd, baseline_week_used, .direction="down") |>
-  fill(baseline_n, q3, mean, sd, mean_2sd, mean_3sd, baseline_week_used, .direction="up") |> ungroup()
+  fill(baseline_n, q3, p95, mean, sd, mean_2sd, mean_3sd, baseline_week_used, .direction="down") |>
+  fill(baseline_n, q3, p95, mean, sd, mean_2sd, mean_3sd, baseline_week_used, .direction="up") |> ungroup()
 
 out <- mon |> left_join(thr, by=c("ou_id","series","week")) |>
   mutate(no_baseline = is.na(mean),
-         across(c(baseline_n, q3, mean, sd, mean_2sd, mean_3sd), ~ replace_na(.x, 0)),
-         above_q3 = ifelse(no_baseline, NA, value > q3), above_mean = ifelse(no_baseline, NA, value > mean),
+         across(c(baseline_n, q3, p95, mean, sd, mean_2sd, mean_3sd), ~ replace_na(.x, 0)),
+         above_q3 = ifelse(no_baseline, NA, value > q3), above_p95 = ifelse(no_baseline, NA, value > p95), above_mean = ifelse(no_baseline, NA, value > mean),
          above_mean_2sd = ifelse(no_baseline, NA, value > mean_2sd), above_mean_3sd = ifelse(no_baseline, NA, value > mean_3sd))
 
 write.csv(out,  paste0("NMCP_eIDSR_monitoring_${s}_${e}_baseline_${bf}_${bt}.csv"), row.names=FALSE)
@@ -1907,6 +1914,7 @@ g = base_all.groupby(["ou_id","series","week"])["value"]
 thr = pd.DataFrame({
     "baseline_n": g.size(),
     "q3":   g.quantile(0.75).round(1),
+    "p95":  g.quantile(0.95).round(1),
     "mean": g.mean().round(1),
     "sd":   g.std(ddof=1).fillna(0).round(1),
     "mean_2sd": (g.mean() + 2*g.std(ddof=1).fillna(0)).round(1),
@@ -1915,7 +1923,7 @@ thr = pd.DataFrame({
 thr["baseline_week_used"] = thr["week"]
 
 # Weeks with no baseline: nearest earlier week first (ffill), then nearest later week (bfill)
-cols = ["baseline_n","q3","mean","sd","mean_2sd","mean_3sd","baseline_week_used"]
+cols = ["baseline_n","q3","p95","mean","sd","mean_2sd","mean_3sd","baseline_week_used"]
 grid = thr[["ou_id","series"]].drop_duplicates().merge(pd.DataFrame({"week":range(1,54)}), how="cross")
 thr = grid.merge(thr, on=["ou_id","series","week"], how="left").sort_values(["ou_id","series","week"])
 thr[cols] = thr.groupby(["ou_id","series"])[cols].transform(lambda c: c.ffill().bfill())
@@ -1923,7 +1931,7 @@ thr[cols] = thr.groupby(["ou_id","series"])[cols].transform(lambda c: c.ffill().
 out = mon.merge(thr, on=["ou_id","series","week"], how="left")
 out["no_baseline"] = out["mean"].isna()
 out[cols[:-1]] = out[cols[:-1]].fillna(0)
-for col, name in [("q3","above_q3"),("mean","above_mean"),("mean_2sd","above_mean_2sd"),("mean_3sd","above_mean_3sd")]:
+for col, name in [("q3","above_q3"),("p95","above_p95"),("mean","above_mean"),("mean_2sd","above_mean_2sd"),("mean_3sd","above_mean_3sd")]:
     out[name] = np.where(out["no_baseline"], None, out["value"] > out[col])
 
 out.to_csv("NMCP_eIDSR_monitoring_${s}_${e}_baseline_${bf}_${bt}.csv", index=False)
