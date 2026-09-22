@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>NMCP eIDSR Malaria Data Extract · ICF-SL</title>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
 :root{--blue:#2c6793;--blue-dk:#1f4a6a;--blue-lt:#e8f0f7;--white:#fff;--bg:#f0f5f9;--border:#d0dde8;--muted:#6c7a89;--gold:#ffc107;--green:#28a745;--teal:#17a2b8;--red:#dc3545;}
@@ -121,7 +122,7 @@ html,body{width:100%;min-height:100vh;font-family:'Segoe UI',Roboto,Arial,sans-s
         <div style="font-size:12px;color:#2c4b62;line-height:1.75;">
 
           <div style="background:var(--blue-lt);border-radius:8px;padding:14px 16px;margin-bottom:18px;">
-            <strong style="color:var(--blue);">Purpose.</strong> This tool extracts <strong>weekly</strong> surveillance data reported through the eIDSR (electronic Integrated Disease Surveillance and Response) system — clinical and confirmed-positive malaria, plus Typhoid Fever — for every health facility in Sierra Leone, cleans it, attaches Public/Private ownership, and produces analysis-ready tables. Every step below is applied automatically on each run.
+            <strong style="color:var(--blue);">Purpose.</strong> This tool extracts <strong>weekly</strong> surveillance data reported through the eIDSR (electronic Integrated Disease Surveillance and Response) system — clinical, confirmed-positive and tested malaria — for every health facility in Sierra Leone, cleans it, attaches Public/Private ownership, and produces analysis-ready tables. Every step below is applied automatically on each run.
           </div>
 
           <div class="m-step"><div class="m-num">1</div><div>
@@ -155,7 +156,7 @@ html,body{width:100%;min-height:100vh;font-family:'Segoe UI',Roboto,Arial,sans-s
                 <tr><th>Data element</th><th>UID</th></tr>
                 <tr><td>EIDSR Total Clinical Malaria cases</td><td><code>KnYtrL5s7vH</code></td></tr>
                 <tr><td>EIDSR Total Malaria cases positive</td><td><code>wWScmbz9N2G</code></td></tr>
-                <tr><td>EIDSR Typhoid Fever</td><td><code>wD5OJhvG4rA</code></td></tr>
+                <tr><td>EIDSR Total Malaria cases tested</td><td><code>RZstMMX0Mnl</code></td></tr>
               </table>
               <div class="m-eghead" style="margin-top:10px;">Category option combos (applied to every data element above)</div>
               <table class="m-tbl">
@@ -165,7 +166,7 @@ html,body{width:100%;min-height:100vh;font-family:'Segoe UI',Roboto,Arial,sans-s
                 <tr><td>5+ years old — cases</td><td><code>jpmVF8rhBNA</code></td></tr>
                 <tr><td>5+ years old — deaths</td><td><code>Ciavs7v4qYa</code></td></tr>
               </table>
-              <div class="m-calc" style="margin-top:6px;">3 data elements × 4 category option combos = <b>12 values fetched per facility per week</b>. Each of the 12 is treated as its own variable throughout — outlier detection, flagging and correction are applied separately to each, never merged before cleaning.</div>
+              <div class="m-calc" style="margin-top:6px;">3 data elements × 4 category option combos = <b>12 values fetched per facility per week</b>. Each of the 12 stays split by age group (&lt;5y / 5+y) — the epidemic threshold is computed separately for each of the 12, so an under-5 outbreak is never diluted by combining it with the over-5 numbers.</div>
             </div>
             <div class="m-note">Unlike monthly HMIS forms, eIDSR periods are <strong>ISO weeks</strong> (Monday–Sunday), coded as <code>YYYYWn</code> (e.g. <code>2026W5</code>). A year has 52 or 53 such weeks depending on where 1 January falls.</div>
           </div></div>
@@ -182,22 +183,6 @@ html,body{width:100%;min-height:100vh;font-family:'Segoe UI',Roboto,Arial,sans-s
           </div></div>
 
           <div class="m-step"><div class="m-num">5</div><div>
-            <div class="m-title">Detect and correct outliers <span class="m-tag">IQR method</span></div>
-            Applied independently to <strong>each facility × each year × each of the 12 variables</strong>. Only reported values (non-missing, greater than zero) are used.
-            <div class="m-formula">
-              Q1 = 25th percentile &nbsp;·&nbsp; Q3 = 75th percentile &nbsp;·&nbsp; IQR = Q3 − Q1<br>
-              <strong>Upper bound = Q3 + 3.0 × IQR</strong> &nbsp; → &nbsp; anything above it is replaced by the <strong>median</strong>
-            </div>
-            <ul class="m-list">
-              <li><strong>Zeros stay zero.</strong> A facility that genuinely saw 0 cases keeps its 0.</li>
-              <li><strong>Missing stays missing.</strong> A week with no report stays blank.</li>
-              <li><strong>Fewer than 4 reported values in that facility-year?</strong> No bound is computed and nothing is corrected.</li>
-            </ul>
-            <div class="m-note"><strong>Why 3.0 and not 1.5?</strong> A flagged value is <em>replaced</em>, a big change, so a false alarm is costly. Malaria transmission is seasonal, so a rainy-season week can legitimately be several times a dry-season week. The wide 3.0 fence lets real seasonal peaks through and reserves correction for values that are almost certainly reporting errors.<br><br>
-            <strong>Why the median, not the bound?</strong> The median is robust to the very outlier it is replacing, so the correction lands on a plausible typical week for that facility rather than an arbitrary threshold.</div>
-          </div></div>
-
-          <div class="m-step"><div class="m-num">6</div><div>
             <div class="m-title">Classify facilities as Active or Inactive</div>
             <ul class="m-list">
               <li><strong>Active</strong> — reported at least one eIDSR value during the selected period.</li>
@@ -206,12 +191,12 @@ html,body{width:100%;min-height:100vh;font-family:'Segoe UI',Roboto,Arial,sans-s
             <div class="m-note">Only active facilities are used as the denominator in the reporting rates below — an inactive facility is an <em>existence</em> problem, not a reporting-behaviour problem, and separating the two keeps both measurable.</div>
           </div></div>
 
-          <div class="m-step"><div class="m-num">7</div><div>
+          <div class="m-step"><div class="m-num">6</div><div>
             <div class="m-title">Build a complete period grid</div>
             For every <strong>active</strong> facility, a row is created for <strong>every week</strong> of the selected range — including weeks with no data. Those appear explicitly with <strong>Reported = No</strong> rather than silently disappearing, so reporting gaps are visible and countable.
           </div></div>
 
-          <div class="m-step"><div class="m-num">8</div><div>
+          <div class="m-step"><div class="m-num">7</div><div>
             <div class="m-title">Calculate reporting rates</div>
             <div class="m-formula">
               <strong>Reporting rate = (facilities reporting eIDSR that week ÷ ACTIVE facilities in that group) × 100</strong>
@@ -219,22 +204,36 @@ html,body{width:100%;min-height:100vh;font-family:'Segoe UI',Roboto,Arial,sans-s
             Computed per week, broken down by <strong>ownership</strong> (Public vs Private) and by <strong>facility type</strong> (CHC, CHP, MCHP, Hospital, Clinic).
           </div></div>
 
-          <div class="m-step"><div class="m-num">9</div><div>
-            <div class="m-title">Produce the outputs</div>
-            Each of the 12 variables carries four columns, in this order:
-            <ul class="m-list">
-              <li><strong>Original</strong> — the raw value from DHIS2, before any correction</li>
-              <li><strong>Upper Bound</strong> — the threshold it was tested against (Q3 + 3.0 × IQR)</li>
-              <li><strong>Outlier</strong> — Yes if the original exceeded the bound</li>
-              <li><strong>Corrected</strong> — equals Original when clean; equals the facility-year median when replaced</li>
-            </ul>
-            Plus totals per condition (<strong>Total Clinical Cases/Deaths</strong>, <strong>Total Positive Cases/Deaths</strong>, <strong>Total Typhoid Cases/Deaths</strong>) and <strong>Reported</strong>.
-            Analyses include weekly reporting rates by ownership and facility type, facility activity, excluded facilities, yearly Public vs Private totals, and an ownership reconciliation — all downloadable as CSV or Excel.
+          <div class="m-step"><div class="m-num">8</div><div>
+            <div class="m-title">Set the baseline and the monitoring period <span class="m-tag">two separate windows</span></div>
+            Two windows are chosen on the Configure Extract tab. The <strong>baseline years</strong> (for example 2021 to 2025) are only used to learn what is normal for each facility. The <strong>monitoring weeks</strong> (for example 2026 W1 to the latest week) are the weeks that get checked against those thresholds. The baseline must end before the monitoring period begins, so a week is never compared against itself.
+            <div class="m-note">Both windows are fetched from DHIS2 in blocks of 13 weeks, which keeps each request small enough for the proxy even when five or more baseline years are selected.</div>
           </div></div>
 
-          <div style="background:#fff8e6;border:1.5px solid var(--gold);border-radius:8px;padding:12px 14px;margin-top:16px;font-size:11.5px;">
-            <strong>Reading the results.</strong> Because outliers are replaced by the median rather than merely trimmed, corrected totals sit slightly below raw totals wherever a correction occurred. Check the per-variable outlier rate after each run: a high rate (say above ~5% of data points) usually means genuine seasonality or an outbreak signal is being flagged, not errors — worth inspecting before the figures are used.
-          </div>
+          <div class="m-step"><div class="m-num">9</div><div>
+            <div class="m-title">Compute epidemic thresholds <span class="m-tag">4 methods · week specific</span></div>
+            Thresholds are built separately for <strong>each facility</strong>, <strong>each series</strong> (Clinical, Confirmed Positive and Tested, split by &lt;5y, 5+y and Combined, for Cases and for Deaths) and <strong>each epi week</strong>. For monitoring week <em>w</em>, the baseline set is the value that facility reported in week <em>w</em> of every baseline year. With 2021 to 2025 as the baseline, week 10 of 2026 is judged against week 10 of 2021, 2022, 2023, 2024 and 2025, so the normal seasonal rise in the rainy season is built into the threshold.
+            <table class="m-tbl" style="margin-top:8px;">
+              <tr><th>Method</th><th>Threshold</th></tr>
+              <tr><td>Upper quartile (Q3)</td><td>The 75th percentile of the baseline set, which is the upper bound of the interquartile range</td></tr>
+              <tr><td>Mean</td><td>The average of the baseline set (the C-SUM style line)</td></tr>
+              <tr><td>Mean + 2 SD</td><td>Average plus two standard deviations</td></tr>
+              <tr><td>Mean + 3 SD</td><td>Average plus three standard deviations</td></tr>
+            </table>
+            <ul class="m-list">
+              <li>A monitoring week is flagged for a method when its value is <strong>greater than</strong> that method's threshold.</li>
+              <li>Weeks a facility did not report are left out of the baseline set rather than counted as zero, so reporting gaps do not pull the threshold down.</li>
+              <li>At least <strong>2 baseline values</strong> are needed for that facility, series and week; otherwise the threshold is left blank. Week 53 uses week 52 of the baseline years when a baseline year has no week 53.</li>
+              <li>The standard deviation is the sample SD (n minus 1), and Q3 uses linear interpolation, matching R <code>quantile(type = 7)</code> and pandas.</li>
+            </ul>
+            <div class="m-note"><strong>How the four compare.</strong> The Mean line is the most sensitive and flags the most weeks, so it works as an early warning. Q3 sits a little higher and is the method many malaria programmes use when only a few baseline years exist. Mean + 2 SD is the usual alert line, and Mean + 3 SD is the strictest, flagging only clear departures from normal. All four are computed on every run; the Epidemic Threshold tab lets you switch between them.</div>
+            <div class="m-note"><strong>Testing the thresholds on past years.</strong> The Year filter on the Epidemic Threshold tab also lists each baseline year. Choosing one applies the same week specific thresholds to every week of that year, so you can see how often each method would have flagged in a normal year. Because that year is itself part of the baseline, this is an in sample check: the Mean line will naturally be crossed in roughly half of the weeks, while Mean + 2 SD and Mean + 3 SD should rarely be crossed if they are well calibrated.</div>
+          </div></div>
+
+          <div class="m-step"><div class="m-num">10</div><div>
+            <div class="m-title">Produce the outputs</div>
+            The monitoring file has one row per facility per week. Each series carries its <strong>value</strong>, the <strong>baseline N</strong>, the four thresholds (<strong>Q3, Mean, Mean + 2 SD, Mean + 3 SD</strong>), the <strong>baseline SD</strong>, and an <strong>Above threshold</strong> column that lists every method the week exceeded. The baseline data (raw weekly values for the baseline years) downloads separately, as do the flagged weeks. Other analyses include weekly reporting rates by ownership and facility type, facility activity, excluded facilities, yearly Public vs Private totals and an ownership reconciliation, all for the monitoring period and all downloadable as CSV or Excel.
+          </div></div>
 
         </div>
       </div>
@@ -244,12 +243,24 @@ html,body{width:100%;min-height:100vh;font-family:'Segoe UI',Roboto,Arial,sans-s
         <strong>What this tool fetches:</strong><br>
         eIDSR weekly malaria surveillance at Level-5 facility for each ISO week in the selected range.<br>
         <strong>Dataset:</strong> IDSR Weekly Disease Report <code>rq0LNr72Ndo</code> (Weekly)<br>
-        <strong>Data elements:</strong> EIDSR Total Clinical Malaria cases <code>KnYtrL5s7vH</code> · EIDSR Total Malaria cases positive <code>wWScmbz9N2G</code> · EIDSR Typhoid Fever <code>wD5OJhvG4rA</code><br>
+        <strong>Data elements:</strong> EIDSR Total Clinical Malaria cases <code>KnYtrL5s7vH</code> · EIDSR Total Malaria cases positive <code>wWScmbz9N2G</code> · EIDSR Total Malaria cases tested <code>RZstMMX0Mnl</code><br>
         <strong>Category option combos:</strong> &lt;5y cases <code>e079rjYqlMH</code> · &lt;5y deaths <code>C5qLGpw4uet</code> · 5+y cases <code>jpmVF8rhBNA</code> · 5+y deaths <code>Ciavs7v4qYa</code><br>
         <strong>Ownership:</strong> Matched on the DHIS2 <strong>OU ID</strong> first (exact), falling back to Level 4 (chiefdom) + Level 5 (facility) name. Adds a Public / Private column to every view and export.<br>
-        <strong>Outlier correction:</strong> IQR method — upper bound = Q3 + 3.0×IQR, computed per facility, per year, per variable. Any value above the bound is <strong>replaced by the median</strong> (whole number) of that facility-year-variable. 0 stays 0, missing stays missing.
+        <strong>Epidemic threshold:</strong> learnt from the <strong>baseline years</strong> and applied to the <strong>monitoring weeks</strong>, per facility, per series and per epi week, using four methods: <strong>Upper quartile (Q3)</strong>, <strong>Mean</strong>, <strong>Mean + 2 SD</strong> and <strong>Mean + 3 SD</strong>. No values are altered, they are only flagged.
       </div>
 
+      <div style="font-size:12px;font-weight:800;color:var(--blue-dk);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px;">1 · Baseline years (used to set the thresholds)</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;">
+        <div class="form-group" style="margin:0;">
+          <label>Baseline From Year</label>
+          <input type="number" class="form-control" id="cfgBaseFrom" min="2010" max="2100" style="font-size:14px;font-weight:700;color:var(--blue-dk);padding:11px 13px;">
+        </div>
+        <div class="form-group" style="margin:0;">
+          <label>Baseline To Year</label>
+          <input type="number" class="form-control" id="cfgBaseTo" min="2010" max="2100" style="font-size:14px;font-weight:700;color:var(--blue-dk);padding:11px 13px;">
+        </div>
+      </div>
+      <div style="font-size:12px;font-weight:800;color:var(--blue-dk);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px;">2 · Monitoring weeks (thresholds are applied to these)</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
         <div class="form-group" style="margin:0;">
           <label>Start Week</label>
@@ -260,6 +271,7 @@ html,body{width:100%;min-height:100vh;font-family:'Segoe UI',Roboto,Arial,sans-s
           <input type="week" class="form-control" id="cfgEnd" style="font-size:14px;font-weight:700;color:var(--blue-dk);padding:11px 13px;">
         </div>
       </div>
+      <div id="cfgSummary" style="font-size:12px;color:var(--blue-dk);background:var(--blue-lt);border-radius:8px;padding:9px 12px;margin-bottom:14px;"></div>
 
       <div id="cfgError" style="display:none;" class="alert alert-err"></div>
       <button class="run-btn" id="btnFetch" onclick="startPipeline()">&#9654; Fetch Data</button>
@@ -303,6 +315,7 @@ html,body{width:100%;min-height:100vh;font-family:'Segoe UI',Roboto,Arial,sans-s
       <div class="tabbar">
         <button class="tabbtn active" id="tabBtnDownload" onclick="showTab('download')">Download</button>
         <button class="tabbtn" id="tabBtnAnalysis" onclick="showTab('analysis')">Analysis</button>
+        <button class="tabbtn" id="tabBtnEpi" onclick="showTab('epi')">Epidemic Threshold</button>
       </div>
 
       <div class="tabpane active" id="tabDownload">
@@ -311,23 +324,23 @@ html,body{width:100%;min-height:100vh;font-family:'Segoe UI',Roboto,Arial,sans-s
         <div class="dl-card">
           <div class="dl-card-head" style="background:var(--blue);">Facility Weekly Data</div>
           <div class="dl-card-body">
-            <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">One row per facility per week. Columns: district, chiefdom, facility, type, ownership, year, week, period, then each of the 12 eIDSR variables with its <strong>corrected value, original value, upper bound and outlier flag</strong>, plus totals and Test Positivity Rate.</div>
+            <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">Monitoring weeks. One row per facility per week. Each of the 18 series (Clinical/Positive/Tested × &lt;5y/5+y/Combined × Cases/Deaths) carries its <strong>value, baseline N, Q3, Mean, Mean + 2 SD, Mean + 3 SD, baseline SD</strong> and the <strong>methods it exceeded</strong>.</div>
             <button class="btn btn-primary" onclick="downloadCSV('facility')">↓ Facility CSV</button>
             <button class="btn btn-outline" onclick="downloadExcel('facility')">↓ Facility Excel</button>
           </div>
         </div>
         <div class="dl-card">
-          <div class="dl-card-head" style="background:#7c3d1a;">Outlier Log</div>
+          <div class="dl-card-head" style="background:#0f766e;">Baseline Weekly Data</div>
           <div class="dl-card-body">
-            <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">All weekly values replaced as outliers: original, corrected (median), upper bound (Q3 + 3.0×IQR), facility details.</div>
-            <button class="btn btn-gold" onclick="downloadCSV('outliers')">↓ Outliers CSV</button>
-            <button class="btn btn-outline" onclick="downloadExcel('outliers')">↓ Outliers Excel</button>
+            <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">Baseline years. One row per facility per week with the raw weekly values of all 18 series. These are the values the thresholds were built from.</div>
+            <button class="btn btn-primary" onclick="downloadCSV('baseline')">↓ Baseline CSV</button>
+            <button class="btn btn-outline" onclick="downloadExcel('baseline')">↓ Baseline Excel</button>
           </div>
         </div>
         <div class="dl-card">
           <div class="dl-card-head" style="background:#1a3a5c;">Reproducible Code</div>
           <div class="dl-card-body">
-            <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">R and Python scripts that reproduce the exact same fetch and IQR-based outlier detection with median replacement.</div>
+            <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">R and Python scripts that reproduce the same fetch and the four week specific threshold methods (Q3, Mean, Mean + 2 SD, Mean + 3 SD).</div>
             <button class="btn btn-outline" onclick="downloadR()">↓ R Script (.R)</button>
             <button class="btn btn-outline" onclick="downloadPy()">↓ Python Script (.py)</button>
           </div>
@@ -345,10 +358,6 @@ html,body{width:100%;min-height:100vh;font-family:'Segoe UI',Roboto,Arial,sans-s
 
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap;">
         <span style="font-size:13px;font-weight:700;color:var(--blue-dk);">Data Preview</span>
-        <select class="form-control" id="previewType" style="width:auto;" onchange="buildPreview()">
-          <option value="facility">Facility Weekly</option>
-          <option value="outliers">Outlier log</option>
-        </select>
         <select class="form-control" id="previewOwn" style="width:auto;" onchange="buildPreview()">
           <option value="">All ownership</option>
           <option value="Public">Public only</option>
@@ -431,7 +440,7 @@ html,body{width:100%;min-height:100vh;font-family:'Segoe UI',Roboto,Arial,sans-s
             <button class="btn btn-outline btn-sm" onclick="downloadYearly('xlsx')">↓ Excel</button>
           </div>
         </div>
-        <div style="font-size:11px;color:var(--muted);margin-bottom:10px;line-height:1.6;">Clinical malaria, positive malaria and typhoid fever — cases and deaths — by year and ownership.</div>
+        <div style="font-size:11px;color:var(--muted);margin-bottom:10px;line-height:1.6;">Clinical malaria, positive malaria and tested malaria — cases and deaths — by year and ownership.</div>
         <div id="yrChart"></div>
         <div class="data-table-wrap" style="margin-top:12px;"><table class="data-table"><thead id="yrHead"></thead><tbody id="yrBody"></tbody></table></div>
       </div>
@@ -449,6 +458,115 @@ html,body{width:100%;min-height:100vh;font-family:'Segoe UI',Roboto,Arial,sans-s
       </div>
 
       </div><!-- /tabAnalysis -->
+
+      <div class="tabpane" id="tabEpi">
+
+      <div style="background:var(--blue-lt);border-radius:8px;padding:14px 16px;margin-bottom:16px;font-size:12px;color:var(--blue-dk);line-height:1.75;">
+        <strong>Method: week specific thresholds from the baseline years</strong><br>
+        For each facility, series and epi week, the same week in every baseline year (<span id="epiBaseTxt">baseline</span>) forms the baseline set. Four thresholds come from that set: <strong>Upper quartile (Q3)</strong>, <strong>Mean</strong>, <strong>Mean + 2 SD</strong> and <strong>Mean + 3 SD</strong>. Each monitoring week (<span id="epiMonTxt">monitoring</span>) is flagged for a method when its value is above that method's threshold. At least 2 baseline values are needed, otherwise the threshold is left blank. Pick the method below to change the threshold line on the charts.
+      </div>
+
+      <!-- Year filter: monitoring year(s) = weeks under review; baseline years = every week, tested against the same thresholds -->
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap;">
+        <span style="font-size:12px;font-weight:800;color:var(--blue-dk);text-transform:uppercase;letter-spacing:.4px;">Year</span>
+        <select class="form-control" id="epiYear" style="width:auto;min-width:300px;font-weight:700;" onchange="onEpiYearChange()"></select>
+      </div>
+      <div id="epiYearNote" style="font-size:11.5px;color:var(--muted);margin-bottom:14px;"></div>
+
+      <!-- Filters: District → Chiefdom → Facility cascade, plus condition and method -->
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;">
+        <select class="form-control" id="tsDistrict" style="width:auto;" onchange="tsHandleDistrict()"><option value="">All Districts</option></select>
+        <select class="form-control" id="tsChiefdom" style="width:auto;" onchange="tsHandleChiefdom()"><option value="">All Chiefdoms</option></select>
+        <select class="form-control" id="tsFacility" style="width:auto;min-width:220px;" onchange="renderTimeSeries()"></select>
+        <select class="form-control" id="tsCondition" style="width:auto;" onchange="renderTimeSeries()">
+          <option value="Clinical">Clinical Malaria</option>
+          <option value="Positive">Confirmed Positive Malaria</option>
+          <option value="Tested">Malaria Tested</option>
+        </select>
+        <select class="form-control" id="tsMethod" style="width:auto;font-weight:700;" onchange="renderTimeSeries()">
+          <option value="q3">Upper quartile (Q3)</option>
+          <option value="mean">Mean</option>
+          <option value="m2sd" selected>Mean + 2 SD</option>
+          <option value="m3sd">Mean + 3 SD</option>
+        </select>
+      </div>
+
+      <div style="font-size:13px;font-weight:700;color:var(--blue-dk);margin-bottom:8px;" id="tsFacilityLabel">Select a facility above</div>
+      <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center;margin-bottom:12px;font-size:12px;font-weight:700;">
+        <span style="display:flex;align-items:center;gap:6px;"><span style="display:inline-block;width:22px;height:0;border-top:3px solid #0072B2;"></span> &lt;5 years (actual)</span>
+        <span style="display:flex;align-items:center;gap:6px;"><span style="display:inline-block;width:22px;height:0;border-top:3px solid #009E73;"></span> 5+ years (actual)</span>
+        <span style="display:flex;align-items:center;gap:6px;"><span style="display:inline-block;width:22px;height:0;border-top:3px solid #CC79A7;"></span> Combined (actual)</span>
+        <span style="display:flex;align-items:center;gap:6px;"><span style="display:inline-block;width:22px;height:0;border-top:3px dashed #D55E00;"></span> <span id="tsLegendMethod">Threshold</span> (by epi week)</span>
+        <span style="display:flex;align-items:center;gap:6px;"><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#D55E00;"></span> Week above threshold</span>
+      </div>
+
+      <div style="font-size:13px;font-weight:800;color:var(--blue-dk);margin:14px 0 8px;">Cases</div>
+      <div style="display:grid;grid-template-columns:1fr;gap:18px;margin-bottom:18px;">
+        <div style="border:1.5px solid var(--border);border-radius:10px;padding:16px;background:#fff;">
+          <div style="font-size:13px;font-weight:800;color:#0072B2;margin-bottom:8px;">&lt;5 years — Cases</div>
+          <div style="height:380px;"><canvas id="ts_cases_u5_canvas"></canvas></div>
+        </div>
+        <div style="border:1.5px solid var(--border);border-radius:10px;padding:16px;background:#fff;">
+          <div style="font-size:13px;font-weight:800;color:#009E73;margin-bottom:8px;">5+ years — Cases</div>
+          <div style="height:380px;"><canvas id="ts_cases_o5_canvas"></canvas></div>
+        </div>
+      </div>
+      <div style="border:1.5px solid var(--border);border-radius:10px;padding:16px;background:#fff;margin-bottom:20px;">
+        <div style="font-size:13px;font-weight:800;color:#CC79A7;margin-bottom:8px;">Combined (&lt;5y + 5+y) — Cases</div>
+        <div style="height:380px;"><canvas id="ts_cases_combined_canvas"></canvas></div>
+      </div>
+
+      <div style="font-size:13px;font-weight:800;color:var(--blue-dk);margin:14px 0 8px;">Deaths</div>
+      <div style="display:grid;grid-template-columns:1fr;gap:18px;margin-bottom:18px;">
+        <div style="border:1.5px solid var(--border);border-radius:10px;padding:16px;background:#fff;">
+          <div style="font-size:13px;font-weight:800;color:#0072B2;margin-bottom:8px;">&lt;5 years — Deaths</div>
+          <div style="height:380px;"><canvas id="ts_deaths_u5_canvas"></canvas></div>
+        </div>
+        <div style="border:1.5px solid var(--border);border-radius:10px;padding:16px;background:#fff;">
+          <div style="font-size:13px;font-weight:800;color:#009E73;margin-bottom:8px;">5+ years — Deaths</div>
+          <div style="height:380px;"><canvas id="ts_deaths_o5_canvas"></canvas></div>
+        </div>
+      </div>
+      <div style="border:1.5px solid var(--border);border-radius:10px;padding:16px;background:#fff;margin-bottom:20px;">
+        <div style="font-size:13px;font-weight:800;color:#CC79A7;margin-bottom:8px;">Combined (&lt;5y + 5+y) — Deaths</div>
+        <div style="height:380px;"><canvas id="ts_deaths_combined_canvas"></canvas></div>
+      </div>
+
+      <!-- Flagged weeks, system-wide -->
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:12px;">
+        <span style="font-size:14px;font-weight:700;color:var(--blue-dk);">All Flagged Weeks, <span id="epiYearTitle">selected year</span> (every facility)</span>
+        <div id="epiStats" style="display:flex;flex-wrap:wrap;gap:8px;"></div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-primary btn-sm" onclick="downloadEpi('csv')">↓ CSV</button>
+          <button class="btn btn-outline btn-sm" onclick="downloadEpi('xlsx')">↓ Excel</button>
+        </div>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap;">
+        <select class="form-control" id="epiCondition" style="width:auto;" onchange="renderEpi()">
+          <option value="">All conditions</option>
+          <option value="Clinical">Clinical Malaria</option>
+          <option value="Positive">Confirmed Positive Malaria</option>
+          <option value="Tested">Malaria Tested</option>
+        </select>
+        <select class="form-control" id="epiStatus" style="width:auto;" onchange="renderEpi()">
+          <option value="">Above any method</option>
+          <option value="q3">Above Q3</option>
+          <option value="mean">Above Mean</option>
+          <option value="m2sd">Above Mean + 2 SD</option>
+          <option value="m3sd">Above Mean + 3 SD</option>
+        </select>
+        <select class="form-control" id="epiMetric" style="width:auto;" onchange="renderEpi()">
+          <option value="">Cases + Deaths</option>
+          <option value="Cases">Cases only</option>
+          <option value="Deaths">Deaths only</option>
+        </select>
+      </div>
+      <div class="data-table-wrap">
+        <table class="data-table"><thead id="epiHead"></thead><tbody id="epiBody"></tbody></table>
+      </div>
+
+      </div><!-- /tabEpi -->
     </div>
   </div>
 </div>
@@ -462,7 +580,7 @@ html,body{width:100%;min-height:100vh;font-family:'Segoe UI',Roboto,Arial,sans-s
 // ═══════════════════════════════════════════════════════════════
 const PROXY    = 'https://script.google.com/macros/s/AKfycbyRXc68PYSmDSCYPakAS8Gc9R00kRjmsMYoDujPYMItyquXfwMAJUtRqXLiDlNWbSfDQQ/exec';
 const BASE_URL = 'https://sl.dhis2.org/hmis';
-const AUTH     = 'Basic ' + btoa('musa-sillahkanu:Navigator/2024!');
+const AUTH     = 'Basic ' + btoa('musasillahkanu:Musa1945kanu');
 const L_PHU=5, L_DIST=2, L_CHIEF=4;
 
 // ── eIDSR dataset ────────────────────────────────────────────
@@ -471,7 +589,7 @@ const EIDSR_DATASET = 'rq0LNr72Ndo'; // IDSR Weekly Disease Report
 // Data elements
 const DE_CLINICAL = 'KnYtrL5s7vH'; // EIDSR Total Clinical Malaria cases
 const DE_POSITIVE = 'wWScmbz9N2G'; // EIDSR Total Malaria cases positive
-const DE_TYPHOID  = 'wD5OJhvG4rA'; // EIDSR Typhoid Fever
+const DE_TESTED   = 'RZstMMX0Mnl'; // EIDSR Total Malaria cases tested
 
 // Category option combos (same 4 apply to every data element above)
 const COC_U5_CASES   = 'e079rjYqlMH'; // <5 years old, cases
@@ -482,7 +600,7 @@ const COC_O5_DEATHS  = 'Ciavs7v4qYa'; // >5 years old, deaths
 const DE_LIST  = [
   {id:DE_CLINICAL, key:'clinical', name:'EIDSR Total Clinical Malaria cases'},
   {id:DE_POSITIVE, key:'positive', name:'EIDSR Total Malaria cases positive'},
-  {id:DE_TYPHOID,  key:'typhoid',  name:'EIDSR Typhoid Fever'},
+  {id:DE_TESTED,   key:'tested',   name:'EIDSR Total Malaria cases tested'},
 ];
 const COC_LIST = [
   {id:COC_U5_CASES,  key:'u5_cases',  age:'<5y',  metric:'Cases',  name:'<5 years old, cases'},
@@ -491,7 +609,7 @@ const COC_LIST = [
   {id:COC_O5_DEATHS, key:'o5_deaths', age:'5+y',  metric:'Deaths', name:'5+ years old, deaths'},
 ];
 
-// ── OUTPUT VARIABLES (12) — each gets its own IQR bound, flag & correction ──
+// ── FETCHED VARIABLES (12) — 3 data elements × 4 category option combos = 12 series per facility, kept age-disaggregated (condition × age × cases/deaths) ──
 const ALL_VARS = [];
 DE_LIST.forEach(de=>{
   COC_LIST.forEach(coc=>{
@@ -554,8 +672,7 @@ function getOwnership(chiefdom,facility,ouId){
 
 // ── State ─────────────────────────────────────────────────────
 let ST={startYr:null,endYr:null,years:[],ouHierarchy:{},
-        rows:[],       // final output rows (one per facility per week)
-        outlierLog:[]};
+        rows:[]};       // final output rows (one per facility per week)
 
 // ═══════════════════════════════════════════════════════════════
 //  UTILITIES
@@ -615,39 +732,14 @@ function weekRange(start,end){
   return out;
 }
 function periodStr(yw){return `${yw.year}W${yw.week}`;}
-
-// ═══════════════════════════════════════════════════════════════
-//  IQR OUTLIER DETECTION (upper bound only) — same method as HMIS tools
-// ═══════════════════════════════════════════════════════════════
-function percentile(arr,p){
-  if(!arr.length)return 0;
-  const s=[...arr].sort((a,b)=>a-b),idx=(p/100)*(s.length-1),lo=Math.floor(idx),hi=Math.ceil(idx);
-  return lo===hi?s[lo]:s[lo]+(idx-lo)*(s[hi]-s[lo]);
+// Numeric sort key for a "YYYYWn" period string — plain string sort puts
+// "2026W10" before "2026W2" (lexicographic), which scrambles the week order.
+function periodSortKey(p){
+  const m=/^(\d{4})W(\d{1,2})$/.exec(p||'');
+  if(!m)return 0;
+  return parseInt(m[1],10)*100+parseInt(m[2],10);
 }
-const IQR_K=3.0;
-function iqrUpperBound(vals){
-  const reported=vals.filter(v=>v!==null&&v!==undefined&&v>0);
-  if(reported.length<4)return Infinity;
-  const q1=percentile(reported,25), q3=percentile(reported,75);
-  const iqr=q3-q1;
-  return q3+IQR_K*iqr;
-}
-function medianOf(vals){
-  const reported=vals.filter(v=>v!==null&&v!==undefined&&v>0);
-  if(!reported.length)return null;
-  return Math.round(percentile(reported,50));
-}
-function winsorizeUpper(vals){
-  const hi=iqrUpperBound(vals);
-  if(!isFinite(hi))return vals;
-  const med=medianOf(vals);
-  if(med===null)return vals;
-  return vals.map(v=>{
-    if(v===null||v===undefined)return null;
-    if(v===0)return 0;
-    return v>hi?med:v;
-  });
-}
+function periodCompare(a,b){return periodSortKey(a)-periodSortKey(b);}
 
 // ═══════════════════════════════════════════════════════════════
 //  DIAGNOSTICS — run before a full extract to see where data drops out
@@ -666,25 +758,59 @@ async function testConnection(){
 
   try{
 
-  // 1) Basic reachability + server date (so relative periods make sense)
+  // 1) Basic reachability — fetch the RAW text first (not JSON-parsed), so we can see
+  //    exactly what the proxy/DHIS2 actually returned if it isn't real API JSON
+  //    (e.g. a login page, a redirect, or an empty object).
   try{
-    const info=await dhis2('/api/system/info.json?fields=serverDate,version');
-    log(`✓ Connected to DHIS2. Server version ${info.version}, server date ${info.serverDate}`);
+    const url=BASE_URL+'/api/system/info.json?fields=serverDate,version';
+    const pUrl=PROXY+'?url='+encodeURIComponent(url)+'&Authorization='+encodeURIComponent(AUTH);
+    const raw=await (await fetch(pUrl)).text();
+    log(`Raw response for /api/system/info.json (first 500 chars):`);
+    log('  '+raw.slice(0,500).replace(/\n/g,'\n  '));
+    let info={};
+    try{info=JSON.parse(raw);}catch(pe){log(`  → Could not JSON-parse this response: ${pe.message}`);}
+    if(info.version){
+      log(`✓ Connected to DHIS2. Server version ${info.version}, server date ${info.serverDate}`);
+    }else{
+      log('✗ Response did not contain a "version" field — this is very likely not a real DHIS2 API response (wrong path, login page, or an error page returned as 200).');
+    }
   }catch(e){
     log(`✗ Could not reach DHIS2 through the proxy: ${e.message}`);
     log('  → Check the PROXY / AUTH constants, or that the Apps Script proxy is still deployed.');
     return;
   }
 
+  // 1b) Confirm the login actually authenticates on THIS instance — system/info is
+  //     public on most DHIS2 servers and succeeds even with bad credentials, so it
+  //     alone doesn't prove AUTH is valid. /api/me.json requires a real login.
+  try{
+    const url=BASE_URL+'/api/me.json?fields=username,organisationUnits[id,displayName]';
+    const pUrl=PROXY+'?url='+encodeURIComponent(url)+'&Authorization='+encodeURIComponent(AUTH);
+    const raw=await (await fetch(pUrl)).text();
+    log(`\nRaw response for /api/me.json (first 500 chars):`);
+    log('  '+raw.slice(0,500).replace(/\n/g,'\n  '));
+    let me={};
+    try{me=JSON.parse(raw);}catch(pe){log(`  → Could not JSON-parse this response: ${pe.message}`);}
+    if(me.username){
+      log(`✓ Logged in as "${me.username}" on this instance.`);
+    }else{
+      log('✗ No "username" field — the AUTH credentials are likely wrong for this instance/path, or /hmis is not a valid DHIS2 API root.');
+      log('  → /hmis may need a different username/password than /hmis23, or the correct path may not be exactly "/hmis". Update BASE_URL / AUTH accordingly.');
+    }
+  }catch(e){
+    log(`✗ /api/me.json failed: ${e.message}`);
+  }
+
   // 2) Confirm the 3 data elements exist and see their category combo
   try{
     const deIds=DE_LIST.map(d=>d.id).join(',');
     const r=await dhis2(`/api/dataElements.json?filter=id:in:[${deIds}]&fields=id,displayName,categoryCombo[id,displayName],valueType&paging=false`);
-    log(`\n✓ dataElements lookup returned ${r.dataElements.length} of ${DE_LIST.length} expected data elements:`);
-    r.dataElements.forEach(d=>log(`   - ${d.displayName} (${d.id}) · categoryCombo="${d.categoryCombo?.displayName}" (${d.categoryCombo?.id}) · valueType=${d.valueType}`));
-    if(r.dataElements.length<DE_LIST.length){
-      const found=new Set(r.dataElements.map(d=>d.id));
-      DE_LIST.filter(d=>!found.has(d.id)).forEach(d=>log(`   ✗ MISSING from this DHIS2 instance: ${d.name} (${d.id})`));
+    const found=r.dataElements||[];
+    log(`\n✓ dataElements lookup returned ${found.length} of ${DE_LIST.length} expected data elements:`);
+    found.forEach(d=>log(`   - ${d.displayName} (${d.id}) · categoryCombo="${d.categoryCombo?.displayName}" (${d.categoryCombo?.id}) · valueType=${d.valueType}`));
+    if(found.length<DE_LIST.length){
+      const foundIds=new Set(found.map(d=>d.id));
+      DE_LIST.filter(d=>!foundIds.has(d.id)).forEach(d=>log(`   ✗ MISSING from this DHIS2 instance: ${d.name} (${d.id})`));
     }
   }catch(e){log(`✗ dataElements lookup failed: ${e.message}`);}
 
@@ -692,11 +818,12 @@ async function testConnection(){
   try{
     const cocIds=COC_LIST.map(c=>c.id).join(',');
     const r=await dhis2(`/api/categoryOptionCombos.json?filter=id:in:[${cocIds}]&fields=id,displayName&paging=false`);
-    log(`\n✓ categoryOptionCombos lookup returned ${r.categoryOptionCombos.length} of ${COC_LIST.length} expected:`);
-    r.categoryOptionCombos.forEach(c=>log(`   - ${c.displayName} (${c.id})`));
-    if(r.categoryOptionCombos.length<COC_LIST.length){
-      const found=new Set(r.categoryOptionCombos.map(c=>c.id));
-      COC_LIST.filter(c=>!found.has(c.id)).forEach(c=>log(`   ✗ MISSING from this DHIS2 instance: ${c.name} (${c.id})`));
+    const found=r.categoryOptionCombos||[];
+    log(`\n✓ categoryOptionCombos lookup returned ${found.length} of ${COC_LIST.length} expected:`);
+    found.forEach(c=>log(`   - ${c.displayName} (${c.id})`));
+    if(found.length<COC_LIST.length){
+      const foundIds=new Set(found.map(c=>c.id));
+      COC_LIST.filter(c=>!foundIds.has(c.id)).forEach(c=>log(`   ✗ MISSING from this DHIS2 instance: ${c.name} (${c.id})`));
     }
   }catch(e){log(`✗ categoryOptionCombos lookup failed: ${e.message}`);}
 
@@ -769,12 +896,13 @@ async function testConnection(){
   try{
     log(`\nTest E — searching dataElements by NAME for "EIDSR" (in case the UIDs above are from a different DHIS2 instance)`);
     const r=await dhis2(`/api/dataElements.json?filter=name:ilike:EIDSR&fields=id,displayName,categoryCombo[id,displayName]&paging=false&pageSize=200`);
-    log(`  → ${r.dataElements.length} data element(s) with "EIDSR" in the name found on this instance.`);
-    r.dataElements.slice(0,40).forEach(d=>log(`     - ${d.displayName}  →  id=${d.id}  ·  categoryCombo=${d.categoryCombo?.displayName} (${d.categoryCombo?.id})`));
-    if(r.dataElements.length===0){
+    const found=r.dataElements||[];
+    log(`  → ${found.length} data element(s) with "EIDSR" in the name found on this instance.`);
+    found.slice(0,40).forEach(d=>log(`     - ${d.displayName}  →  id=${d.id}  ·  categoryCombo=${d.categoryCombo?.displayName} (${d.categoryCombo?.id})`));
+    if(found.length===0){
       log('  → Nothing at all matches "EIDSR" by name either on this instance/path. Worth double-checking the base URL/path this tool points to.');
     }else{
-      log('  → If any of the names above match what you expect, copy their real "id=" value — the tool\'s DE_CLINICAL / DE_POSITIVE / DE_TYPHOID constants need updating to these, not the ones from the metadata sheet.');
+      log('  → If any of the names above match what you expect, copy their real "id=" value — the tool\'s DE_CLINICAL / DE_POSITIVE / DE_TESTED constants need updating to these, not the ones from the metadata sheet.');
     }
   }catch(e){log(`✗ Test E failed: ${e.message}`);}
 
@@ -782,17 +910,42 @@ async function testConnection(){
   try{
     log(`\nTest F — searching datasets by NAME for "IDSR"`);
     const r=await dhis2(`/api/dataSets.json?filter=name:ilike:IDSR&fields=id,displayName,periodType&paging=false`);
-    log(`  → ${r.dataSets.length} dataset(s) with "IDSR" in the name found on this instance.`);
-    r.dataSets.forEach(d=>log(`     - ${d.displayName}  →  id=${d.id}  ·  periodType=${d.periodType}`));
+    const found=r.dataSets||[];
+    log(`  → ${found.length} dataset(s) with "IDSR" in the name found on this instance.`);
+    found.forEach(d=>log(`     - ${d.displayName}  →  id=${d.id}  ·  periodType=${d.periodType}`));
   }catch(e){log(`✗ Test F failed: ${e.message}`);}
 
   // 10) Name-based search for the category option combos (age group breakdown)
   try{
     log(`\nTest G — searching categoryOptionCombos by NAME for "years old"`);
     const r=await dhis2(`/api/categoryOptionCombos.json?filter=name:ilike:years old&fields=id,displayName&paging=false&pageSize=200`);
-    log(`  → ${r.categoryOptionCombos.length} categoryOptionCombo(s) with "years old" in the name found on this instance.`);
-    r.categoryOptionCombos.slice(0,40).forEach(c=>log(`     - ${c.displayName}  →  id=${c.id}`));
+    const found=r.categoryOptionCombos||[];
+    log(`  → ${found.length} categoryOptionCombo(s) with "years old" in the name found on this instance.`);
+    found.slice(0,40).forEach(c=>log(`     - ${c.displayName}  →  id=${c.id}`));
   }catch(e){log(`✗ Test G failed: ${e.message}`);}
+
+
+  // 11) Org unit hierarchy on THIS instance — list every level and how many
+  //     org units sit at each one, since /hmis may have a different hierarchy
+  //     to /hmis23 (the tool currently assumes Level 5 = facility/PHU).
+  try{
+    log(`\nTest H — organisation unit levels on this instance`);
+    const lv=await dhis2(`/api/organisationUnitLevels.json?fields=level,displayName&order=level:asc&paging=false`);
+    if(!lv.organisationUnitLevels||!lv.organisationUnitLevels.length){
+      log('  → No organisationUnitLevels returned — check auth for this instance.');
+    }else{
+      for(const l of lv.organisationUnitLevels){
+        try{
+          const c=await dhis2(`/api/organisationUnits.json?level=${l.level}&paging=true&pageSize=1&fields=id`);
+          const total=c.pager?.total??'?';
+          log(`     Level ${l.level} = "${l.displayName}"  →  ${total} org unit(s)`);
+        }catch(e2){
+          log(`     Level ${l.level} = "${l.displayName}"  →  count failed: ${e2.message}`);
+        }
+      }
+      log(`  → The tool currently uses Level ${L_PHU} for facilities and Level ${L_DIST} for districts. If those numbers/names above don't match "facility/PHU" and "district", update L_PHU / L_DIST to the correct levels for this instance.`);
+    }
+  }catch(e){log(`✗ Test H failed: ${e.message}`);}
 
   log('\nDone. Copy this panel\'s text if you need help interpreting it.');
 
@@ -811,24 +964,100 @@ function showConfig(){
   document.getElementById('resultsSection').style.display='none';
 }
 
-async function startPipeline(){
+// One row per ACTIVE facility per week. A facility is active for a window
+// if it reported at least one value in that window.
+function buildWeekRows(rawSlots,weekList){
+  const out=[];
+  Object.keys(ST.ouHierarchy).forEach(ouId=>{
+    const ou=ST.ouHierarchy[ouId];
+    const byYear=rawSlots[ouId];
+    if(!byYear)return;
+    const anyReported=weekList.some(w=>{const sl=byYear[w.year]&&byYear[w.year][w.week];return sl&&Object.keys(sl).length>0;});
+    if(!anyReported)return;
+    const own=getOwnership(ou.chiefdomName,ou.name,ou.id);
+    weekList.forEach(w=>{
+      const slot=(byYear[w.year]&&byYear[w.year][w.week])||{};
+      const row={ou_id:ouId, facility:ou.name, hfType:ou.hfType, chiefdom:ou.chiefdomName, district:ou.districtName,
+        ownership:own, year:w.year, week:w.week, period:`${w.year}W${w.week}`};
+      let anyVal=false;
+      const tot={};
+      ALL_VARS.forEach(dx=>{
+        const v=slot[dx.field];
+        const has=(v!==undefined&&v!==null);
+        const val=has?Math.round(v):null;
+        row[dx.field]=val;
+        if(has){
+          anyVal=true;
+          const k=`total_${dx.deKey}_${dx.metric==='Deaths'?'deaths':'cases'}`;
+          tot[k]=(tot[k]||0)+val;
+        }
+      });
+      // Combined = <5y + 5+y; left blank (not zero) when neither age group was reported
+      ['clinical','positive','tested'].forEach(c=>['cases','deaths'].forEach(m=>{
+        const k=`total_${c}_${m}`; row[k]=(k in tot)?tot[k]:null;
+      }));
+      row.reported=anyVal?'Yes':'No';
+      out.push(row);
+    });
+  });
+  return out;
+}
+
+// Config defaults: baseline = previous 5 full years, monitoring = week 1 of this year to last full week
+function isoWeekOf(d){
+  const t=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate()));
+  const day=t.getUTCDay()||7; t.setUTCDate(t.getUTCDate()+4-day);
+  const y=t.getUTCFullYear(); const y1=new Date(Date.UTC(y,0,1));
+  return {year:y, week:Math.ceil(((t-y1)/86400000+1)/7)};
+}
+function updateCfgSummary(){
+  const el=document.getElementById('cfgSummary');if(!el)return;
+  const bf=parseInt(document.getElementById('cfgBaseFrom').value,10), bt=parseInt(document.getElementById('cfgBaseTo').value,10);
+  const s=parseWeekInput(document.getElementById('cfgStart').value), e=parseWeekInput(document.getElementById('cfgEnd').value);
+  if(!bf||!bt||!s||!e){el.textContent='Enter the baseline years and the monitoring weeks.';return;}
+  const n=bt-bf+1;
+  el.innerHTML=`Thresholds learnt from <strong>${bf} to ${bt}</strong> (${n} year${n>1?'s':''}, so up to ${n} values per epi week) and applied to <strong>${s.year} W${s.week} to ${e.year} W${e.week}</strong>. Example: ${s.year} W${s.week} is compared with W${s.week} of ${bf}${n>1?' to '+bt:''}.`;
+}
+(function initCfgDefaults(){
+  const now=new Date(); const last=new Date(now.getTime()-7*86400000);
+  const lw=isoWeekOf(last); const cy=lw.year;
+  const pad=n=>String(n).padStart(2,'0');
+  const set=(id,v)=>{const el=document.getElementById(id);if(el&&!el.value)el.value=v;};
+  set('cfgBaseFrom',cy-5); set('cfgBaseTo',cy-1);
+  set('cfgStart',`${cy}-W01`); set('cfgEnd',`${lw.year}-W${pad(lw.week)}`);
+  ['cfgBaseFrom','cfgBaseTo','cfgStart','cfgEnd'].forEach(id=>{const el=document.getElementById(id);if(el)el.addEventListener('input',updateCfgSummary);});
+  updateCfgSummary();
+})();
+
+// ── Resume cache: every block that downloaded successfully is kept here, so
+// Retry continues from the block that failed instead of starting again.
+// A fresh Fetch Data click from the Configure screen clears it.
+let FETCH_CACHE={ou:null, blocks:{}};
+async function startPipeline(resume){
+  if(!resume)FETCH_CACHE={ou:null, blocks:{}};
   const cfgS=document.getElementById('cfgStart').value;
   const cfgE=document.getElementById('cfgEnd').value;
+  const baseFrom=parseInt(document.getElementById('cfgBaseFrom').value,10);
+  const baseTo=parseInt(document.getElementById('cfgBaseTo').value,10);
   const errEl=document.getElementById('cfgError');
   errEl.style.display='none';
+  const fail=m=>{errEl.textContent=m;errEl.style.display='block';};
   const start=parseWeekInput(cfgS), end=parseWeekInput(cfgE);
-  if(!start||!end){errEl.textContent='Please select both Start Week and End Week.';errEl.style.display='block';return;}
-  if(start.year>end.year||(start.year===end.year&&start.week>end.week)){
-    errEl.textContent='Start Week must be on or before End Week.';errEl.style.display='block';return;
-  }
+  if(!baseFrom||!baseTo)return fail('Please enter both Baseline From Year and Baseline To Year.');
+  if(baseFrom>baseTo)return fail('Baseline From Year must be on or before Baseline To Year.');
+  if(baseTo-baseFrom>9)return fail('Please limit the baseline to 10 years or fewer.');
+  if(!start||!end)return fail('Please select both Start Week and End Week for the monitoring period.');
+  if(start.year>end.year||(start.year===end.year&&start.week>end.week))return fail('Start Week must be on or before End Week.');
+  if(baseTo>=start.year)return fail(`The baseline must end before the monitoring period starts. Monitoring starts in ${start.year}, so Baseline To Year must be ${start.year-1} or earlier.`);
 
   const weeks=weekRange(start,end);
   const years=[...new Set(weeks.map(w=>w.year))];
+  const baseYears=[];for(let y=baseFrom;y<=baseTo;y++)baseYears.push(y);
+  const baseWeeks=[];baseYears.forEach(y=>{for(let w=1;w<=isoWeeksInYear(y);w++)baseWeeks.push({year:y,week:w});});
   ST.startYr=years[0];ST.endYr=years[years.length-1];
   ST.cfgStart=cfgS;ST.cfgEnd=cfgE;ST.years=years;ST.weeks=weeks;
-  ST.rows=[];ST.outlierLog=[];
-
-  const inRange=(yr,wk)=>weeks.some(w=>w.year===yr&&w.week===wk);
+  ST.baseYears=baseYears;ST.baseWeeks=baseWeeks;ST.baseFrom=baseFrom;ST.baseTo=baseTo;
+  ST.rows=[];ST.baseRows=[];
 
   document.getElementById('configScreen').style.display='none';
   document.getElementById('pipelineScreen').style.display='block';
@@ -838,16 +1067,18 @@ async function startPipeline(){
   _sn=0;setProgress(2);setPill('Running…','rgba(255,193,7,.5)');
 
   addStep('s_ou',   'Fetch Level-5 facility registry with hierarchy');
-  addStep('s_fetch',`Fetch eIDSR — 12 values per week — ${cfgS} → ${cfgE} · ${weeks.length} week(s)`);
-  addStep('s_wins', 'Detect outliers (Q3 + 3.0×IQR) — replace with facility-year median');
-  addStep('s_build','Build output rows — facility weekly grid');
+  addStep('s_base', `Fetch baseline eIDSR · ${baseFrom} to ${baseTo} · ${baseWeeks.length} week(s)`);
+  addStep('s_fetch',`Fetch monitoring eIDSR · ${cfgS} → ${cfgE} · ${weeks.length} week(s)`);
+  addStep('s_build','Build output rows · facility weekly grid for baseline and monitoring');
+  addStep('s_epi',  'Compute week specific thresholds (Q3, Mean, Mean + 2 SD, Mean + 3 SD)');
 
   try{
     // ── S1: Org Units ─────────────────────────────────────────
-    setStep('s_ou','running');setProgress(5);
-    const ouResp=await dhis2('/api/organisationUnits.json?level='+L_PHU+'&fields=id,displayName,level,ancestors[id,displayName,level]&paging=false&pageSize=50000');
+    setStep('s_ou','running');setProgress(4);
+    const ouResp=FETCH_CACHE.ou||await dhis2('/api/organisationUnits.json?level='+L_PHU+'&fields=id,displayName,level,ancestors[id,displayName,level]&paging=false&pageSize=50000');
+    FETCH_CACHE.ou=ouResp;
     const VALID=['Hospital','Clinic','CHC','CHP','MCHP'];
-    ST.excluded=[];
+    ST.excluded=[];ST.ouHierarchy={};
     (ouResp.organisationUnits||[]).forEach(ou=>{
       const anc=(ou.ancestors||[]).sort((a,b)=>a.level-b.level);
       const dist=anc.find(a=>a.level===L_DIST);
@@ -862,7 +1093,7 @@ async function startPipeline(){
         districtName:rec.district,chiefdomName:rec.chiefdom};
     });
     setStep('s_ou','done',`${Object.keys(ST.ouHierarchy).length} facilities included · ${ST.excluded.length} excluded`);
-    setProgress(12);await sleep(30);
+    setProgress(8);await sleep(30);
 
     try{
       const deIds=DE_LIST.map(d=>d.id).join(',');
@@ -874,146 +1105,74 @@ async function startPipeline(){
       (deResp.dataElements||[]).forEach(d=>{DE_NAMES[d.id]=d.displayName;});
       (cocResp.categoryOptionCombos||[]).forEach(c=>{COC_NAMES[c.id]=c.displayName;});
     }catch(e){console.warn('Metadata fetch failed, using defaults',e);}
-    setProgress(15);await sleep(30);
+    setProgress(10);await sleep(30);
 
-    // ── S2: Fetch analytics per year ──────────────────────────
-    setStep('s_fetch','running');
+    // ── S2 + S3: Fetch analytics in blocks of 13 weeks ─────────
     const rawSlots={}; // rawSlots[ouId][yr][week] = {field: value}
-    let winCount=0, totalAssessed=0;
-    let apiRowCount=0, matchedRowCount=0, droppedDx=0, droppedOu=0, droppedZero=0;
-    ST.varStats={};ALL_VARS.forEach(v=>{ST.varStats[v.field]={corrected:0,assessed:0};});
-
-    for(let ci=0;ci<ST.years.length;ci++){
-      const yr=ST.years[ci];
-      const wks=weeks.filter(w=>w.year===yr).map(w=>w.week);
-      if(!wks.length)continue;
-      setStep('s_fetch','running',`Year ${yr} — ${wks.length} week(s) (${ci+1}/${ST.years.length})`);
-      const pe=wks.map(wk=>`${yr}W${wk}`).join(';');
-      const url='/api/analytics.json?dimension=dx:'+DX_PARAM+'&dimension=pe:'+pe+'&dimension=ou:LEVEL-'+L_PHU+'&displayProperty=NAME&paging=false&ignoreLimit=true';
-      console.log('[eIDSR fetch] '+BASE_URL+url);
-      const resp=await dhis2(url);
-      apiRowCount+=(resp.rows||[]).length;
-      (resp.rows||[]).forEach(row=>{
-        const[dxStr,period,ouId,rawVal]=row;
-        const val=parseFloat(rawVal)||0;if(!val){droppedZero++;return;}
-        const map=DX_MAP[dxStr];if(!map){droppedDx++;return;}
-        const ou=ST.ouHierarchy[ouId];if(!ou){droppedOu++;return;}
-        const yr2=parseInt(period.slice(0,4),10);
-        const wkMatch=/W(\d{1,2})$/.exec(period);
-        const wk=wkMatch?parseInt(wkMatch[1],10):null;
-        if(!wk)return;
-        if(!rawSlots[ouId])rawSlots[ouId]={};
-        if(!rawSlots[ouId][yr2])rawSlots[ouId][yr2]={};
-        if(!rawSlots[ouId][yr2][wk])rawSlots[ouId][yr2][wk]={};
-        const slot=rawSlots[ouId][yr2][wk];
-        slot[map.field]=(slot[map.field]||0)+val;
-        matchedRowCount++;
-      });
-    }
-    const allOuIds=Object.keys(ST.ouHierarchy);
-    if(apiRowCount===0){
-      setStep('s_fetch','error',`DHIS2 API returned 0 rows for ${cfgS} → ${cfgE}.`);
-      throw new Error(`DHIS2 returned 0 analytics rows for ${cfgS} → ${cfgE}. Go back and use "Test Connection / Diagnose No-Data Issue" on the Configure Extract tab — it will show whether this is a period-format, org-unit-level, or analytics-tables-not-run problem.`);
-    }else if(matchedRowCount===0){
-      setStep('s_fetch','error',`API returned ${apiRowCount.toLocaleString()} rows, but 0 matched.`);
-      throw new Error(`DHIS2 returned ${apiRowCount.toLocaleString()} rows but none matched a known data element/COC (${droppedDx} dropped) or a facility in the registry (${droppedOu} dropped). Run "Test Connection / Diagnose No-Data Issue" on the Configure Extract tab to check the dx and org-unit-level assumptions.`);
-    }else{
-      setStep('s_fetch','done',`API returned ${apiRowCount.toLocaleString()} rows · ${matchedRowCount.toLocaleString()} matched · facility registry: ${allOuIds.length}`);
-    }
-    setProgress(55);await sleep(30);
-
-    // ── S3: Outlier detection per facility × year × variable ──
-    setStep('s_wins','running');
-    ST.upperBoundStore={};
-    allOuIds.forEach(ouId=>{
-      const byYear=rawSlots[ouId];if(!byYear)return;
-      ST.years.forEach(yr=>{
-        const wksInYear=byYear[yr];if(!wksInYear)return;
-        const weekNums=Object.keys(wksInYear).map(Number).sort((a,b)=>a-b);
-        ALL_VARS.forEach(dx=>{
-          const vals=weekNums.map(wk=>{
-            const v=wksInYear[wk][dx.field];
-            return (v!==undefined&&v!==null)?v:null;
-          });
-          const nonNull=vals.filter(v=>v!==null);
-          totalAssessed+=nonNull.length;
-          ST.varStats[dx.field].assessed+=nonNull.length;
-          const hi=iqrUpperBound(vals);
-          ST.upperBoundStore[`${ouId}|${yr}|${dx.field}`]=isFinite(hi)?Math.round(hi):'';
-          const w=winsorizeUpper(vals);
-          weekNums.forEach((wk,i)=>{
-            const orig=vals[i], corr=w[i];
-            if(orig!==null&&corr!==null&&orig!==corr){
-              winCount++;ST.varStats[dx.field].corrected++;
-              const ou=ST.ouHierarchy[ouId];
-              ST.outlierLog.push({
-                ouId, facility:ou?ou.name:'', hfType:ou?ou.hfType:'',
-                chiefdom:ou?ou.chiefdomName:'', district:ou?ou.districtName:'',
-                ownership:ou?getOwnership(ou.chiefdomName,ou.name,ou.id):'Unknown',
-                year:yr, week:wk,
-                variable:dx.label, field:dx.field,
-                original:Math.round(orig), corrected:Math.round(corr),
-                upperBound:isFinite(hi)?Math.round(hi):'',
-              });
-              wksInYear[wk][dx.field+'_orig']=orig;
-              wksInYear[wk][dx.field]=corr;
-            }
-          });
+    async function fetchWeeks(stepId,weekList,pFrom,pTo){
+      const chunks=[];
+      for(let i=0;i<weekList.length;i+=13)chunks.push(weekList.slice(i,i+13));
+      let api=0,matched=0,dDx=0,dOu=0,reused=0;
+      setStep(stepId,'running');
+      for(let ci=0;ci<chunks.length;ci++){
+        const ch=chunks[ci];
+        const pe=ch.map(periodStr).join(';');
+        let resp=FETCH_CACHE.blocks[pe];
+        if(resp){reused++;}
+        else{
+          setStep(stepId,'running',`${periodStr(ch[0])} → ${periodStr(ch[ch.length-1])} (block ${ci+1}/${chunks.length}${reused?` · ${reused} already downloaded`:''})`);
+          const url='/api/analytics.json?dimension=dx:'+DX_PARAM+'&dimension=pe:'+pe+'&dimension=ou:LEVEL-'+L_PHU+'&displayProperty=NAME&paging=false&ignoreLimit=true';
+          try{ resp=await dhis2(url); }
+          catch(e){ throw new Error(`Stopped at block ${ci+1} of ${chunks.length} (${periodStr(ch[0])} → ${periodStr(ch[ch.length-1])}): ${e.message}. Click Retry to continue from this block; the blocks already downloaded are kept.`); }
+          FETCH_CACHE.blocks[pe]=resp;
+        }
+        api+=(resp.rows||[]).length;
+        (resp.rows||[]).forEach(row=>{
+          const[dxStr,period,ouId,rawVal]=row;
+          const val=parseFloat(rawVal)||0;if(!val)return;
+          const map=DX_MAP[dxStr];if(!map){dDx++;return;}
+          if(!ST.ouHierarchy[ouId]){dOu++;return;}
+          const yr2=parseInt(period.slice(0,4),10);
+          const wkMatch=/W(\d{1,2})$/.exec(period);
+          const wk=wkMatch?parseInt(wkMatch[1],10):null;
+          if(!wk)return;
+          const slot=(((rawSlots[ouId]=rawSlots[ouId]||{})[yr2]=rawSlots[ouId][yr2]||{})[wk]=rawSlots[ouId][yr2][wk]||{});
+          slot[map.field]=(slot[map.field]||0)+val;
+          matched++;
         });
-      });
-    });
-    setStep('s_wins','done',`${winCount} values corrected across ${[...new Set(ST.outlierLog.map(r=>r.ouId))].length} facilities`);
-    setProgress(78);await sleep(30);
-
-    // ── S4: Build output rows ─────────────────────────────────
-    setStep('s_build','running');
-    const correctedSet=new Set(ST.outlierLog.map(r=>`${r.ouId}|${r.year}|${r.week}|${r.field}`));
-    ST.rows=[];
-    allOuIds.forEach(ouId=>{
-      const ou=ST.ouHierarchy[ouId];if(!ou)return;
-      const byYear=rawSlots[ouId];
-      let anyReported=false;
-      if(byYear){
-        weeks.forEach(w=>{
-          const slot=byYear[w.year]&&byYear[w.year][w.week];
-          if(slot&&ALL_VARS.some(dx=>slot[dx.field]!==undefined&&slot[dx.field]!==null))anyReported=true;
-        });
+        setProgress(pFrom+Math.round((ci+1)/chunks.length*(pTo-pFrom)));
       }
-      if(!anyReported)return; // inactive facility — no rows
-      weeks.forEach(w=>{
-        const slot=(byYear&&byYear[w.year]&&byYear[w.year][w.week])||{};
-        const row={
-          ou_id:ouId, facility:ou.name, hfType:ou.hfType,
-          chiefdom:ou.chiefdomName, district:ou.districtName,
-          ownership:getOwnership(ou.chiefdomName,ou.name,ou.id),
-          year:w.year, week:w.week, period:`${w.year}W${w.week}`,
-        };
-        let anyVal=false;
-        const tot={clinical:{cases:0,deaths:0},positive:{cases:0,deaths:0},typhoid:{cases:0,deaths:0}};
-        ALL_VARS.forEach(dx=>{
-          const v=slot[dx.field];
-          const has=(v!==undefined&&v!==null);
-          if(has)anyVal=true;
-          row[dx.field]=has?Math.round(v):null;
-          const orig=(slot[dx.field+'_orig']!==undefined)?slot[dx.field+'_orig']:v;
-          row[dx.field+'_orig']=(orig!==undefined&&orig!==null)?Math.round(orig):null;
-          row[dx.field+'_outlier']=correctedSet.has(`${ouId}|${w.year}|${w.week}|${dx.field}`)?'Yes':'No';
-          const ub=ST.upperBoundStore[`${ouId}|${w.year}|${dx.field}`];
-          row[dx.field+'_ub']=(ub!==null&&ub!==undefined)?ub:'';
-          if(has){
-            const val=Math.round(v);
-            const bucket=tot[dx.deKey];
-            if(bucket){ if(dx.metric==='Deaths')bucket.deaths+=val; else bucket.cases+=val; }
-          }
-        });
-        row.total_clinical_cases=tot.clinical.cases; row.total_clinical_deaths=tot.clinical.deaths;
-        row.total_positive_cases=tot.positive.cases; row.total_positive_deaths=tot.positive.deaths;
-        row.total_typhoid_cases=tot.typhoid.cases;   row.total_typhoid_deaths=tot.typhoid.deaths;
-        row.reported=anyVal?'Yes':'No';
-        ST.rows.push(row);
-      });
-    });
-    setStep('s_build','done',`${ST.rows.length.toLocaleString()} rows built`);
+      return {api,matched,dDx,dOu,reused};
+    }
+    const bRes=await fetchWeeks('s_base',baseWeeks,10,50);
+    if(bRes.matched===0){
+      setStep('s_base','error',`No baseline data matched for ${baseFrom} to ${baseTo} (API rows: ${bRes.api.toLocaleString()}).`);
+      throw new Error(`DHIS2 returned no usable baseline data for ${baseFrom} to ${baseTo}. Thresholds cannot be built without a baseline. Check that eIDSR was reporting in those years, or pick later baseline years, and use "Test Connection / Diagnose No-Data Issue" on the Configure Extract tab if needed.`);
+    }
+    setStep('s_base','done',`API returned ${bRes.api.toLocaleString()} rows · ${bRes.matched.toLocaleString()} matched${bRes.reused?` · ${bRes.reused} block(s) reused from before the retry`:''}`);
+    const mRes=await fetchWeeks('s_fetch',weeks,50,72);
+    if(mRes.api===0){
+      setStep('s_fetch','error',`DHIS2 API returned 0 rows for ${cfgS} → ${cfgE}.`);
+      throw new Error(`DHIS2 returned 0 analytics rows for ${cfgS} → ${cfgE}. Go back and use "Test Connection / Diagnose No-Data Issue" on the Configure Extract tab. It will show whether this is a period format, org unit level, or analytics tables not run problem.`);
+    }else if(mRes.matched===0){
+      setStep('s_fetch','error',`API returned ${mRes.api.toLocaleString()} rows, but 0 matched.`);
+      throw new Error(`DHIS2 returned ${mRes.api.toLocaleString()} rows but none matched a known data element/COC (${mRes.dDx} dropped) or a facility in the registry (${mRes.dOu} dropped). Run "Test Connection / Diagnose No-Data Issue" on the Configure Extract tab to check the dx and org unit level assumptions.`);
+    }
+    setStep('s_fetch','done',`API returned ${mRes.api.toLocaleString()} rows · ${mRes.matched.toLocaleString()} matched${mRes.reused?` · ${mRes.reused} block(s) reused`:''} · facility registry: ${Object.keys(ST.ouHierarchy).length}`);
+    setProgress(74);await sleep(30);
+
+    // ── S4: Build output rows (raw fetched totals, nothing corrected) ──
+    setStep('s_build','running');
+    ST.rows=buildWeekRows(rawSlots,weeks);
+    ST.baseRows=buildWeekRows(rawSlots,baseWeeks);
+    setStep('s_build','done',`${ST.rows.length.toLocaleString()} monitoring rows · ${ST.baseRows.length.toLocaleString()} baseline rows`);
+    setProgress(82);await sleep(30);
+
+    // ── S5: Epidemic thresholds ────────────────────────────────
+    setStep('s_epi','running');
+    attachEpiThresholds();
+    ST.epiFlagged=getEpiFlaggedList();
+    setStep('s_epi','done',`${ST.epiFlagged.length.toLocaleString()} facility-week-series above at least one threshold`);
     setProgress(95);await sleep(30);
 
     // Show results
@@ -1022,10 +1181,8 @@ async function startPipeline(){
 
     const totalClin=ST.rows.reduce((s,r)=>s+(r.total_clinical_cases||0),0);
     const totalPos =ST.rows.reduce((s,r)=>s+(r.total_positive_cases||0),0);
-    const totalTyph=ST.rows.reduce((s,r)=>s+(r.total_typhoid_cases||0),0);
-    const totalDeaths=ST.rows.reduce((s,r)=>s+(r.total_clinical_deaths||0)+(r.total_positive_deaths||0)+(r.total_typhoid_deaths||0),0);
-    const nOutlierFac=[...new Set(ST.outlierLog.map(r=>r.ouId))].length;
-    const outlierPct=totalAssessed>0?(winCount/totalAssessed*100).toFixed(2):0;
+    const totalTest=ST.rows.reduce((s,r)=>s+(r.total_tested_cases||0),0);
+    const totalDeaths=ST.rows.reduce((s,r)=>s+(r.total_clinical_deaths||0)+(r.total_positive_deaths||0)+(r.total_tested_deaths||0),0);
     const ownCounts={Public:0,Private:0,Unknown:0};
     Object.values(ST.ouHierarchy||{}).forEach(ou=>{
       const o=getOwnership(ou.chiefdomName,ou.name,ou.id);
@@ -1033,15 +1190,21 @@ async function startPipeline(){
     });
     const totalFacilities=Object.keys(ST.ouHierarchy||{}).length;
     const activeFacilities=[...new Set(ST.rows.map(r=>r.ou_id))].length;
+    const methodPills=EPI_METHODS.map(m=>{
+      const n=(ST.epiFlagged||[]).filter(f=>f.flags[m.id]).length;
+      return `<div class="stat-pill ${m.id==='m3sd'?'':'warn'}" ${m.id==='m3sd'?'style="background:#f8d7da;border-color:var(--red);color:#721c24;"':''}>${n.toLocaleString()} above ${m.short}</div>`;
+    }).join('');
 
     document.getElementById('statsRow').innerHTML=[
-      `<div class="stat-pill ok">${ST.cfgStart} → ${ST.cfgEnd} · ${weeks.length} week(s)</div>`,
+      `<div class="stat-pill ok">Baseline ${ST.baseFrom} to ${ST.baseTo} (${ST.baseYears.length} yr)</div>`,
+      `<div class="stat-pill ok">Monitoring ${ST.cfgStart} → ${ST.cfgEnd} · ${weeks.length} week(s)</div>`,
       `<div class="stat-pill">${ST.rows.length.toLocaleString()} rows · ${activeFacilities.toLocaleString()} active facilities</div>`,
-      `<div class="stat-pill">Clinical: ${totalClin.toLocaleString()} · Positive: ${totalPos.toLocaleString()} · Typhoid: ${totalTyph.toLocaleString()} · Deaths (all): ${totalDeaths.toLocaleString()}</div>`,
-      `<div class="stat-pill">${totalAssessed.toLocaleString()} non-zero data points assessed</div>`,
-      `<div class="stat-pill warn">${ST.outlierLog.length.toLocaleString()} corrections · ${nOutlierFac} facilities · ${outlierPct}% overall</div>`,
+      `<div class="stat-pill">Clinical: ${totalClin.toLocaleString()} · Positive: ${totalPos.toLocaleString()} · Tested: ${totalTest.toLocaleString()} · Deaths (all): ${totalDeaths.toLocaleString()}</div>`,
+      methodPills,
       `<div class="stat-pill ok">${totalFacilities.toLocaleString()} facilities · ${ownCounts.Public.toLocaleString()} Public · ${ownCounts.Private.toLocaleString()} Private</div>`,
     ].join('');
+    document.getElementById('epiBaseTxt').textContent=`${ST.baseFrom} to ${ST.baseTo}`;
+    document.getElementById('epiMonTxt').textContent=`${ST.cfgStart} to ${ST.cfgEnd}`;
 
     buildPreview();
     renderExcluded();
@@ -1049,6 +1212,8 @@ async function startPipeline(){
     renderReporting();
     renderYearly();
     renderReconciliation();
+    populateEpiFilters();
+    renderEpi();
     showTab('download');
     setProgress(100);setPill('Done ✓','rgba(40,167,69,.55)');
 
@@ -1058,7 +1223,8 @@ async function startPipeline(){
     Object.keys(stepEls).forEach(k=>{if(stepEls[k]?.classList.contains('running'))stepEls[k].className='step-item error';});
     const e=document.createElement('div');
     e.style.cssText='margin-top:12px;padding:12px;background:#2e0a0a;border-radius:6px;color:#ef9a9a;font-size:12px;line-height:1.6;';
-    e.innerHTML=`<strong>✗ Error</strong><br>${err.message}<br><br><button onclick="startPipeline()" style="background:#1f4a6a;color:#fff;border:none;padding:7px 16px;border-radius:6px;cursor:pointer;font-weight:700;">↺ Retry</button>`;
+    const nSaved=Object.keys(FETCH_CACHE.blocks).length;
+    e.innerHTML=`<strong>✗ Error</strong><br>${err.message}<br>${nSaved?`<span style="color:#a5d6a7;">${nSaved} block(s) already downloaded and kept. Retry continues from where it stopped.</span><br>`:''}<br><button onclick="startPipeline(true)" style="background:#1f4a6a;color:#fff;border:none;padding:7px 16px;border-radius:6px;cursor:pointer;font-weight:700;">↺ Retry</button>`;
     document.getElementById('stepList').appendChild(e);
     setPill('Error','rgba(220,53,69,.5)');
   }
@@ -1067,40 +1233,39 @@ async function startPipeline(){
 // ═══════════════════════════════════════════════════════════════
 //  PREVIEW TABLE / HEADERS
 // ═══════════════════════════════════════════════════════════════
+const BASE_HDR=['District','Chiefdom','Facility','Type','Ownership','Year','Week','Period'];
 function buildHeaders(){
-  const base=['District','Chiefdom','Facility','Type','Ownership','Year','Week','Period'];
-  const varCols=[];
-  ALL_VARS.forEach(dx=>{
-    const nm=`${dx.deName} (${dx.age} ${dx.metric})`;
-    varCols.push(`${nm} Original`,`${nm} Upper Bound`,`${nm} Outlier`,`${nm} Corrected`);
+  const epiCols=[];
+  EPI_SERIES.forEach(s=>{
+    epiCols.push(s.label, `${s.label} Baseline N`, ...EPI_METHODS.map(m=>`${s.label} ${m.short}`), `${s.label} Baseline SD`, `${s.label} Above Threshold`);
   });
   return {
-    facility:[...base,...varCols,'Total Clinical Cases','Total Clinical Deaths','Total Positive Cases','Total Positive Deaths','Total Typhoid Cases','Total Typhoid Deaths','Reported'],
-    outliers:['District','Chiefdom','Facility','Type','Ownership','Year','Week','Variable','Original','Corrected','Upper Bound','Outlier'],
+    facility:[...BASE_HDR,...epiCols,'Reported'],
+    baseline:[...BASE_HDR,...EPI_SERIES.map(s=>s.label),'Reported'],
   };
 }
 function getRows(type){
   const base=r=>[r.district,r.chiefdom,r.facility,r.hfType,r.ownership??'Unknown',r.year,r.week,r.period];
-  if(type==='outliers'){
-    return ST.outlierLog.map(r=>[
-      r.district,r.chiefdom,r.facility,r.hfType,r.ownership??'Unknown',r.year,r.week,
-      r.variable, r.original, r.corrected, r.upperBound, 'Yes'
-    ]);
+  if(type==='baseline'){
+    return (ST.baseRows||[]).map(r=>[...base(r),...EPI_SERIES.map(s=>r[s.field]??''),r.reported??'']);
   }
   return ST.rows.map(r=>{
     const cols=[...base(r)];
-    ALL_VARS.forEach(dx=>{
-      cols.push(r[dx.field+'_orig']??'');
-      cols.push(r[dx.field+'_ub']??'');
-      cols.push(r[dx.field+'_outlier']??'No');
-      cols.push(r[dx.field]??'');
+    EPI_SERIES.forEach(s=>{
+      const t=r[s.key+'_thr'];
+      cols.push(r[s.field]??'', t?t.n:'', ...EPI_METHODS.map(m=>t?t[m.id]:''), t?t.sd:'', t?methodsExceeded(r,s):'');
     });
-    cols.push(r.total_clinical_cases??'',r.total_clinical_deaths??'',r.total_positive_cases??'',r.total_positive_deaths??'',r.total_typhoid_cases??'',r.total_typhoid_deaths??'',r.reported??'');
+    cols.push(r.reported??'');
     return cols;
   });
 }
+function methodsExceeded(r,s,f){
+  f=f||rowFlags(r,s);if(!f)return '';
+  const hit=EPI_METHODS.filter(m=>f[m.id]).map(m=>m.short);
+  return hit.length?hit.join('; '):'None';
+}
 function buildPreview(){
-  const type=document.getElementById('previewType').value;
+  const type='facility';
   const q=(document.getElementById('previewSearch').value||'').toLowerCase();
   const hdrs=buildHeaders()[type];
   const ownFilter=(document.getElementById('previewOwn')||{}).value||'';
@@ -1110,44 +1275,58 @@ function buildPreview(){
   const show=rows.slice(0,500);
   document.getElementById('previewCount').textContent=`Showing ${show.length} of ${rows.length} rows`;
   document.getElementById('previewHead').innerHTML=`<tr>${hdrs.map(h=>`<th>${h}</th>`).join('')}</tr>`;
-  const outlierCols=hdrs.map((h,i)=>/outlier$/i.test(h)?i:-1).filter(i=>i>=0);
+  const statusCols=hdrs.map((h,i)=>/Above Threshold$/i.test(h)?i:-1).filter(i=>i>=0);
   document.getElementById('previewBody').innerHTML=show.map(r=>{
     return `<tr>${r.map((c,ci)=>{
-      const isOutCol=outlierCols.includes(ci);
-      const base=String(hdrs[ci]).replace(/ (Original|Corrected)$/,'');
-      const outIdx=hdrs.indexOf(base+' Outlier');
-      const isPairedValue=/ (Original|Corrected)$/.test(hdrs[ci]) && outIdx>=0 && r[outIdx]==='Yes';
       let style='';
-      if(isOutCol){ style = c==='Yes' ? 'font-weight:800;color:#dc2626;' : c==='No' ? 'color:#6b7280;' : ''; }
-      else if(isPairedValue){ style='font-weight:800;color:#dc2626;'; }
+      if(statusCols.includes(ci)&&c&&c!=='None'){
+        style = /Mean \+ 3 SD/.test(c) ? 'font-weight:800;color:#dc2626;' : 'font-weight:800;color:#b45309;';
+      }
       return `<td style="${style}">${c??''}</td>`;
     }).join('')}</tr>`;
   }).join('');
 }
 
 // ═══════════════════════════════════════════════════════════════
-//  DOWNLOADS
+//  DOWNLOADS (Blob based, so large baseline files download reliably)
 // ═══════════════════════════════════════════════════════════════
-function triggerDL(content, fname){
-  const a=document.createElement('a');
-  a.href='data:text/plain;charset=utf-8,'+encodeURIComponent(content);
-  a.download=fname; a.click();
+function _saveBlob(content,fname,mime){
+  const blob=new Blob([content],{type:(mime||'text/plain')+';charset=utf-8'});
+  const url=URL.createObjectURL(blob);const a=document.createElement('a');
+  a.href=url;a.download=fname;document.body.appendChild(a);a.click();document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(url),3000);
+}
+function triggerDL(content, fname){ _saveBlob(content,fname,/\.csv$/i.test(fname)?'text/csv':'text/plain'); }
+function _csvCell(c){ return `"${String(c??'').replace(/"/g,'""')}"`; }
+function _fileTag(type){
+  return type==='baseline' ? `baseline_${ST.baseFrom}_${ST.baseTo}` : `${type}_${ST.cfgStart}_${ST.cfgEnd}_baseline_${ST.baseFrom}_${ST.baseTo}`;
 }
 function downloadCSV(type){
   const hdrs=buildHeaders()[type];
   const rows=getRows(type);
-  const csv=[hdrs.join(','),...rows.map(r=>r.map(c=>`"${c??''}"`).join(','))].join('\n');
-  const a=document.createElement('a');
-  a.download=`NMCP_eIDSR_${type}_${ST.cfgStart}_${ST.cfgEnd}.csv`;
-  a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
-  a.click();
+  const csv=[hdrs.map(_csvCell).join(','),...rows.map(r=>r.map(_csvCell).join(','))].join('\n');
+  _saveBlob('\ufeff'+csv,`NMCP_eIDSR_${_fileTag(type)}.csv`,'text/csv');
 }
 function downloadExcel(type){
   const wb=XLSX.utils.book_new();
   const hdrs=buildHeaders()[type];
   const rows=getRows(type);
-  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([hdrs,...rows]),type.slice(0,28));
-  XLSX.writeFile(wb,`NMCP_eIDSR_${type}_${ST.cfgStart}_${ST.cfgEnd}.xlsx`);
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([hdrs,...rows]),type==='baseline'?'Baseline':'Monitoring');
+  if(type==='facility'){
+    const info=[['Setting','Value'],
+      ['Baseline years',`${ST.baseFrom} to ${ST.baseTo}`],
+      ['Monitoring weeks',`${ST.cfgStart} to ${ST.cfgEnd}`],
+      ['Baseline set','For each facility, series and epi week: the value of that same epi week in every baseline year (unreported weeks left out)'],
+      ['Minimum baseline values','2'],
+      ['Q3','75th percentile of the baseline set (upper bound of the interquartile range, linear interpolation)'],
+      ['Mean','Average of the baseline set'],
+      ['Mean + 2 SD','Average plus 2 sample standard deviations'],
+      ['Mean + 3 SD','Average plus 3 sample standard deviations'],
+      ['Above Threshold','Methods whose threshold the week value is greater than'],
+    ];
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(info),'Method');
+  }
+  XLSX.writeFile(wb,`NMCP_eIDSR_${_fileTag(type)}.xlsx`);
 }
 
 // ── Facility Ownership Match Report ──────────────────────────
@@ -1336,7 +1515,7 @@ function getYearly(){
     if(!b)return;
     b.clinC+=r.total_clinical_cases||0; b.clinD+=r.total_clinical_deaths||0;
     b.posC +=r.total_positive_cases||0; b.posD +=r.total_positive_deaths||0;
-    b.typC +=r.total_typhoid_cases||0;  b.typD +=r.total_typhoid_deaths||0;
+    b.typC +=r.total_tested_cases||0;   b.typD +=r.total_tested_deaths||0;
   });
   return Object.keys(byYear).sort().map(yr=>({year:yr,...byYear[yr]}));
 }
@@ -1346,8 +1525,8 @@ function yrRows(){
     d.Private.clinC,d.Private.clinD,d.Private.posC,d.Private.posD,d.Private.typC,d.Private.typD]);
 }
 const YR_HDR=['Year',
-  'Public Clinical Cases','Public Clinical Deaths','Public Positive Cases','Public Positive Deaths','Public Typhoid Cases','Public Typhoid Deaths',
-  'Private Clinical Cases','Private Clinical Deaths','Private Positive Cases','Private Positive Deaths','Private Typhoid Cases','Private Typhoid Deaths'];
+  'Public Clinical Cases','Public Clinical Deaths','Public Positive Cases','Public Positive Deaths','Public Tested Cases','Public Tested Deaths',
+  'Private Clinical Cases','Private Clinical Deaths','Private Positive Cases','Private Positive Deaths','Private Tested Cases','Private Tested Deaths'];
 function downloadYearly(fmt){
   const rows=yrRows();
   if(fmt==='xlsx'){
@@ -1417,6 +1596,306 @@ function downloadReconciliation(){
 }
 
 // ═══════════════════════════════════════════════════════════════
+//  EPIDEMIC THRESHOLD · learnt from baseline years, applied to monitoring weeks
+//  Four methods: Q3, Mean, Mean + 2 SD, Mean + 3 SD
+//  Computed per facility, per series and per epi week from that same week
+//  in every baseline year, then attached to EVERY monitoring row.
+// ═══════════════════════════════════════════════════════════════
+const EPI_SERIES=[
+  {key:'clinical_u5_cases',  label:'Clinical <5y Cases',   field:'clinical_u5_cases',  cond:'Clinical', age:'<5y', metric:'Cases'},
+  {key:'clinical_o5_cases',  label:'Clinical 5+y Cases',   field:'clinical_o5_cases',  cond:'Clinical', age:'5+y', metric:'Cases'},
+  {key:'clinical_u5_deaths', label:'Clinical <5y Deaths',  field:'clinical_u5_deaths', cond:'Clinical', age:'<5y', metric:'Deaths'},
+  {key:'clinical_o5_deaths', label:'Clinical 5+y Deaths',  field:'clinical_o5_deaths', cond:'Clinical', age:'5+y', metric:'Deaths'},
+  {key:'positive_u5_cases',  label:'Positive <5y Cases',   field:'positive_u5_cases',  cond:'Positive', age:'<5y', metric:'Cases'},
+  {key:'positive_o5_cases',  label:'Positive 5+y Cases',   field:'positive_o5_cases',  cond:'Positive', age:'5+y', metric:'Cases'},
+  {key:'positive_u5_deaths', label:'Positive <5y Deaths',  field:'positive_u5_deaths', cond:'Positive', age:'<5y', metric:'Deaths'},
+  {key:'positive_o5_deaths', label:'Positive 5+y Deaths',  field:'positive_o5_deaths', cond:'Positive', age:'5+y', metric:'Deaths'},
+  {key:'tested_u5_cases',    label:'Tested <5y Cases',     field:'tested_u5_cases',    cond:'Tested',   age:'<5y', metric:'Cases'},
+  {key:'tested_o5_cases',    label:'Tested 5+y Cases',     field:'tested_o5_cases',    cond:'Tested',   age:'5+y', metric:'Cases'},
+  {key:'tested_u5_deaths',   label:'Tested <5y Deaths',    field:'tested_u5_deaths',   cond:'Tested',   age:'<5y', metric:'Deaths'},
+  {key:'tested_o5_deaths',   label:'Tested 5+y Deaths',    field:'tested_o5_deaths',   cond:'Tested',   age:'5+y', metric:'Deaths'},
+  // Combined (both age groups added together): its own baseline, not a sum of the two age thresholds
+  {key:'clinical_cases',  label:'Clinical Combined Cases',   field:'total_clinical_cases',  cond:'Clinical', age:'Combined', metric:'Cases'},
+  {key:'clinical_deaths', label:'Clinical Combined Deaths',  field:'total_clinical_deaths', cond:'Clinical', age:'Combined', metric:'Deaths'},
+  {key:'positive_cases',  label:'Positive Combined Cases',   field:'total_positive_cases',  cond:'Positive', age:'Combined', metric:'Cases'},
+  {key:'positive_deaths', label:'Positive Combined Deaths',  field:'total_positive_deaths', cond:'Positive', age:'Combined', metric:'Deaths'},
+  {key:'tested_cases',    label:'Tested Combined Cases',     field:'total_tested_cases',    cond:'Tested',   age:'Combined', metric:'Cases'},
+  {key:'tested_deaths',   label:'Tested Combined Deaths',    field:'total_tested_deaths',   cond:'Tested',   age:'Combined', metric:'Deaths'},
+];
+const EPI_METHODS=[
+  {id:'q3',   short:'Q3',          label:'Upper quartile (Q3)'},
+  {id:'mean', short:'Mean',        label:'Mean'},
+  {id:'m2sd', short:'Mean + 2 SD', label:'Mean + 2 SD'},
+  {id:'m3sd', short:'Mean + 3 SD', label:'Mean + 3 SD'},
+];
+const EPI_MIN_BASELINE=2;
+const _r1=v=>Math.round(v*10)/10;
+// Linear interpolation quantile (R type 7 / numpy default)
+function quantile(sorted,p){
+  const idx=p*(sorted.length-1),lo=Math.floor(idx),hi=Math.ceil(idx);
+  return lo===hi?sorted[lo]:sorted[lo]+(idx-lo)*(sorted[hi]-sorted[lo]);
+}
+function thresholdStats(vals){
+  const n=vals.length;
+  if(n<EPI_MIN_BASELINE)return null;
+  const s=[...vals].sort((a,b)=>a-b);
+  const mean=vals.reduce((a,b)=>a+b,0)/n;
+  const sd=Math.sqrt(vals.reduce((a,b)=>a+(b-mean)*(b-mean),0)/(n-1)); // sample SD
+  return {n, q3:_r1(quantile(s,0.75)), mean:_r1(mean), sd:_r1(sd), m2sd:_r1(mean+2*sd), m3sd:_r1(mean+3*sd)};
+}
+// Baseline pools: ouId|seriesKey|epiWeek -> {year: value} from every baseline year.
+// Only reported, non-blank values are pooled (gaps are not treated as zero).
+function buildBaselinePools(){
+  const pools={};
+  (ST.baseRows||[]).forEach(r=>{
+    if(r.reported!=='Yes')return;
+    EPI_SERIES.forEach(s=>{
+      const v=r[s.field];
+      if(v===undefined||v===null)return;
+      const key=r.ou_id+'|'+s.key+'|'+r.week;
+      (pools[key]=pools[key]||{})[r.year]=v;
+    });
+  });
+  return pools;
+}
+// The baseline set for one facility, series and epi week: that week in every
+// baseline year. For W53, a baseline year that has no W53 contributes its W52.
+function baselineSet(pools,ouId,sKey,week){
+  const out=[];
+  (ST.baseYears||[]).forEach(y=>{
+    const w=(week===53&&isoWeeksInYear(y)<53)?52:week;
+    const p=pools[ouId+'|'+sKey+'|'+w];
+    if(p&&p[y]!==undefined)out.push(p[y]);
+  });
+  return out;
+}
+// Threshold lookup shared by monitoring rows and the past year test.
+// Thresholds depend only on facility, series and epi week, so they are cached once.
+let _thrPools=null,_thrCache={};
+function statsFor(ouId,sKey,week){
+  const ck=ouId+'|'+sKey+'|'+week;
+  if(!(ck in _thrCache))_thrCache[ck]=thresholdStats(baselineSet(_thrPools,ouId,sKey,week));
+  return _thrCache[ck];
+}
+// Threshold and flags for any row. Monitoring rows carry them already;
+// baseline rows are evaluated on the fly so the large baseline set stays light in memory.
+function rowThr(r,sKey){ return (sKey+'_thr' in r) ? r[sKey+'_thr'] : statsFor(r.ou_id,sKey,r.week); }
+function rowFlags(r,s){
+  if(s.key+'_flags' in r)return r[s.key+'_flags'];
+  const t=rowThr(r,s.key), v=r[s.field];
+  if(!t||v===undefined||v===null)return null;
+  const f={};EPI_METHODS.forEach(m=>{f[m.id]=v>t[m.id];});return f;
+}
+function attachEpiThresholds(){
+  _thrPools=buildBaselinePools();_thrCache={};_flagCache={};
+  ST.rows.forEach(r=>{
+    EPI_SERIES.forEach(s=>{
+      const t=statsFor(r.ou_id,s.key,r.week);
+      const v=r[s.field];
+      r[s.key+'_thr']=t;
+      if(!t||v===undefined||v===null){r[s.key+'_flags']=null;return;}
+      const f={};EPI_METHODS.forEach(m=>{f[m.id]=v>t[m.id];});
+      r[s.key+'_flags']=f;
+    });
+  });
+}
+// Flat list of every facility-week-series that is above at least one method
+function getEpiFlaggedList(rows){
+  const list=[];
+  (rows||ST.rows).forEach(r=>{
+    EPI_SERIES.forEach(s=>{
+      const f=rowFlags(r,s);
+      if(!f||!EPI_METHODS.some(m=>f[m.id]))return;
+      const t=rowThr(r,s.key);
+      list.push({
+        district:r.district,chiefdom:r.chiefdom,facility:r.facility,hfType:r.hfType,ownership:r.ownership,
+        condition:s.cond, metric:s.metric, series:s.label, period:r.period, year:r.year, week:r.week,
+        value:r[s.field], thr:t, flags:f, exceeded:methodsExceeded(r,s,f),
+      });
+    });
+  });
+  const sev=f=>EPI_METHODS.filter(m=>f.flags[m.id]).length;
+  list.sort((a,b)=>sev(b)-sev(a)||a.district.localeCompare(b.district)||a.facility.localeCompare(b.facility)||periodCompare(a.period,b.period));
+  return list;
+}
+const EPI_HDR=['District','Chiefdom','Facility','Type','Ownership','Series','Week','Value','Baseline N','Q3','Mean','Mean + 2 SD','Mean + 3 SD','Baseline SD','Above Threshold'];
+function epiRows(list){
+  return list.map(f=>[f.district,f.chiefdom,f.facility,f.hfType,f.ownership,f.series,f.period,f.value,f.thr.n,f.thr.q3,f.thr.mean,f.thr.m2sd,f.thr.m3sd,f.thr.sd,f.exceeded]);
+}
+// ── Year filter ───────────────────────────────────────────────
+let _flagCache={};
+function epiYearSel(){ const v=(document.getElementById('epiYear')||{}).value; return v?parseInt(v,10):null; }
+function isMonitoringYear(y){ return (ST.years||[]).includes(y); }
+function yearRows(y){
+  if(y===null)return ST.rows;
+  return isMonitoringYear(y) ? ST.rows.filter(r=>r.year===y) : (ST.baseRows||[]).filter(r=>r.year===y);
+}
+function yearFlagged(y){
+  if(y===null||isMonitoringYear(y)){ const all=ST.epiFlagged||[]; return y===null?all:all.filter(f=>f.year===y); }
+  if(!(y in _flagCache))_flagCache[y]=getEpiFlaggedList(yearRows(y));
+  return _flagCache[y];
+}
+function populateEpiYear(){
+  const sel=document.getElementById('epiYear');
+  const opts=[];
+  [...(ST.years||[])].reverse().forEach(y=>{
+    const wk=(ST.weeks||[]).filter(w=>w.year===y);
+    opts.push(`<option value="${y}">${y} · weeks under review (W${wk[0].week} to W${wk[wk.length-1].week})</option>`);
+  });
+  [...(ST.baseYears||[])].reverse().forEach(y=>{
+    opts.push(`<option value="${y}">${y} · baseline year, all weeks (threshold test)</option>`);
+  });
+  sel.innerHTML=opts.join('');
+  updateEpiYearNote();
+}
+function updateEpiYearNote(){
+  const y=epiYearSel();
+  document.getElementById('epiYearTitle').textContent=y===null?'all years':String(y);
+  document.getElementById('epiYearNote').innerHTML = isMonitoringYear(y)
+    ? `Showing the weeks under review in ${y}, checked against thresholds from ${ST.baseFrom} to ${ST.baseTo}.`
+    : `Testing the thresholds on a past year: every week of ${y} is checked against the same thresholds from ${ST.baseFrom} to ${ST.baseTo}. ${y} is part of that baseline, so this is an in sample check of how often each method flags in a normal year.`;
+}
+function onEpiYearChange(){ updateEpiYearNote(); tsHandleChiefdom(); renderEpi(); }
+
+function getEpiFiltered(){
+  let list=yearFlagged(epiYearSel());
+  const cond=(document.getElementById('epiCondition')||{}).value;
+  const meth=(document.getElementById('epiStatus')||{}).value;
+  const metric=(document.getElementById('epiMetric')||{}).value;
+  if(cond)list=list.filter(f=>f.condition===cond);
+  if(meth)list=list.filter(f=>f.flags[meth]);
+  if(metric)list=list.filter(f=>f.metric===metric);
+  return list;
+}
+function renderEpi(){
+  const all=yearFlagged(epiYearSel());
+  const nFac=[...new Set(all.map(f=>f.facility+'|'+f.district))].length;
+  document.getElementById('epiStats').innerHTML=[
+    `<div class="stat-pill">${all.length.toLocaleString()} flagged data point(s)</div>`,
+    ...EPI_METHODS.map(m=>`<div class="stat-pill ${m.id==='m3sd'?'':'warn'}" ${m.id==='m3sd'?'style="background:#f8d7da;border-color:var(--red);color:#721c24;"':''}>${all.filter(f=>f.flags[m.id]).length.toLocaleString()} above ${m.short}</div>`),
+    `<div class="stat-pill ok">${nFac.toLocaleString()} facilities affected</div>`,
+  ].join('');
+  const list=getEpiFiltered();
+  document.getElementById('epiHead').innerHTML=`<tr>${EPI_HDR.map(h=>`<th>${h}</th>`).join('')}</tr>`;
+  document.getElementById('epiBody').innerHTML=list.slice(0,500).map(f=>{
+    const top=f.flags.m3sd;
+    const rowStyle=top?'background:#fdecea;':'';
+    const statusStyle=top?'font-weight:800;color:#dc2626;':'font-weight:800;color:#b45309;';
+    const cell=(id,v)=>`<td style="${f.flags[id]?'font-weight:800;':''}">${v}</td>`;
+    return `<tr style="${rowStyle}"><td>${f.district}</td><td>${f.chiefdom}</td><td>${f.facility}</td><td>${f.hfType}</td><td>${f.ownership}</td><td>${f.series}</td><td>${f.period}</td><td><strong>${f.value}</strong></td><td>${f.thr.n}</td>${cell('q3',f.thr.q3)}${cell('mean',f.thr.mean)}${cell('m2sd',f.thr.m2sd)}${cell('m3sd',f.thr.m3sd)}<td>${f.thr.sd}</td><td style="${statusStyle}">${f.exceeded}</td></tr>`;
+  }).join('')+(list.length>500?`<tr><td colspan="${EPI_HDR.length}" style="text-align:center;color:var(--muted);">Showing the first 500 of ${list.length.toLocaleString()} rows. Download for the full list.</td></tr>`:'');
+}
+function downloadEpi(fmt){
+  const list=getEpiFiltered();
+  const rows=epiRows(list);
+  const y=epiYearSel();
+  const tag=`${isMonitoringYear(y)?ST.cfgStart+'_'+ST.cfgEnd:'test_year_'+y}_baseline_${ST.baseFrom}_${ST.baseTo}`;
+  if(fmt==='xlsx'){
+    const wb=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([EPI_HDR,...rows]),'Flagged Weeks');
+    XLSX.writeFile(wb,`NMCP_eIDSR_FlaggedWeeks_${tag}.xlsx`);
+  }else{
+    const csv=[EPI_HDR.map(_csvCell).join(','),...rows.map(r=>r.map(_csvCell).join(','))].join('\n');
+    _saveBlob('\ufeff'+csv,`NMCP_eIDSR_FlaggedWeeks_${tag}.csv`,'text/csv');
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+//  TIME SERIES CHART — cases & deaths for a filtered facility, with
+//  the selected method's week specific threshold line overlaid.
+//  Filter pattern (District → Chiefdom → Facility cascade) follows
+//  the same approach as the uploaded malaria analytics dashboard.
+// ═══════════════════════════════════════════════════════════════
+let _tsCharts={cases_u5:null,cases_o5:null,cases_combined:null,deaths_u5:null,deaths_o5:null,deaths_combined:null};
+function populateEpiFilters(){
+  populateEpiYear();
+  const distSel=document.getElementById('tsDistrict');
+  const distSet=new Set(Object.values(ST.ouHierarchy||{}).map(ou=>ou.districtName).filter(Boolean));
+  distSel.innerHTML='<option value="">All Districts</option>'+[...distSet].sort().map(d=>`<option value="${d}">${d}</option>`).join('');
+  tsHandleDistrict();
+}
+function tsHandleDistrict(){
+  const dist=document.getElementById('tsDistrict').value;
+  const chiefSel=document.getElementById('tsChiefdom');
+  const facSel=document.getElementById('tsFacility');
+  const chiefs=new Set(Object.values(ST.ouHierarchy||{}).filter(ou=>!dist||ou.districtName===dist).map(ou=>ou.chiefdomName).filter(Boolean));
+  chiefSel.innerHTML='<option value="">All Chiefdoms</option>'+[...chiefs].sort().map(c=>`<option value="${c}">${c}</option>`).join('');
+  tsHandleChiefdom();
+}
+function tsHandleChiefdom(){
+  const dist=document.getElementById('tsDistrict').value;
+  const chief=document.getElementById('tsChiefdom').value;
+  const facSel=document.getElementById('tsFacility');
+  // Only offer facilities that are ACTIVE (appear in ST.rows) so the chart always has something to show
+  const activeIds=new Set(yearRows(epiYearSel()).filter(r=>r.reported==='Yes').map(r=>r.ou_id));
+  const facs=Object.values(ST.ouHierarchy||{})
+    .filter(ou=>activeIds.has(ou.id))
+    .filter(ou=>(!dist||ou.districtName===dist)&&(!chief||ou.chiefdomName===chief))
+    .sort((a,b)=>a.name.localeCompare(b.name));
+  facSel.innerHTML=facs.map(ou=>`<option value="${ou.id}">${ou.name}</option>`).join('');
+  renderTimeSeries();
+}
+// 6 charts per facility: Cases <5y / 5+y / Combined and Deaths <5y / 5+y / Combined.
+// The threshold line is week specific, so it follows the seasonal shape of the baseline.
+const TS_AGE_COLOR={u5:'#0072B2', o5:'#009E73', combined:'#CC79A7'}; // Okabe and Ito
+const TS_THR_COLOR='#D55E00';
+if(typeof Chart!=='undefined'){ Chart.defaults.font.family='Arial, Helvetica, sans-serif'; Chart.defaults.color='#000'; }
+function renderTimeSeries(){
+  if(typeof Chart==='undefined')return;
+  const facId=document.getElementById('tsFacility').value;
+  const cond=document.getElementById('tsCondition').value.toLowerCase();
+  const methId=document.getElementById('tsMethod').value;
+  const meth=EPI_METHODS.find(m=>m.id===methId);
+  document.getElementById('tsLegendMethod').textContent=meth.label+' threshold';
+  const rows=yearRows(epiYearSel()).filter(r=>r.ou_id===facId).sort((a,b)=>periodCompare(a.period,b.period));
+  const labels=rows.map(r=>r.period);
+  const facName=rows.length?rows[0].facility:'';
+  document.getElementById('tsFacilityLabel').textContent=facName?`${facName} · ${document.getElementById('tsCondition').selectedOptions[0].text} · ${meth.label}`:'Select a facility above';
+
+  [['cases_u5','u5','Cases'],['cases_o5','o5','Cases'],['cases_combined','combined','Cases'],
+   ['deaths_u5','u5','Deaths'],['deaths_o5','o5','Deaths'],['deaths_combined','combined','Deaths']].forEach(([which,ageKey,metric])=>{
+    const canvas=document.getElementById('ts_'+which+'_canvas');
+    if(!canvas)return;
+    if(_tsCharts[which]){_tsCharts[which].destroy();_tsCharts[which]=null;}
+    if(!rows.length)return;
+    const sKey = ageKey==='combined' ? `${cond}_${metric.toLowerCase()}` : `${cond}_${ageKey}_${metric.toLowerCase()}`;
+    const ser=EPI_SERIES.find(s=>s.key===sKey);
+    const color=TS_AGE_COLOR[ageKey];
+    const values=rows.map(r=>r[ser.field]??null);
+    const thrVals=rows.map(r=>{const t=rowThr(r,sKey);return t?t[methId]:null;});
+    const above=rows.map(r=>{const f=rowFlags(r,ser);return !!(f&&f[methId]);});
+    _tsCharts[which]=new Chart(canvas.getContext('2d'),{
+      type:'line',
+      data:{labels, datasets:[
+        {label:(ageKey==='u5'?'<5y ':ageKey==='o5'?'5+y ':'Combined ')+metric, data:values, borderColor:color, backgroundColor:color,
+          pointBackgroundColor:above.map(a=>a?TS_THR_COLOR:color), pointBorderColor:'#fff', pointBorderWidth:1.5,
+          pointRadius:above.map(a=>a?7:4), pointHoverRadius:9, tension:0.15, fill:false, borderWidth:3, spanGaps:false, order:1},
+        {label:meth.label+' threshold', data:thrVals, borderColor:TS_THR_COLOR, borderDash:[8,5],
+          pointRadius:0, borderWidth:2.5, fill:false, tension:0, spanGaps:true, order:0},
+      ]},
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        interaction:{mode:'index',intersect:false},
+        scales:{
+          y:{ beginAtZero:true, title:{display:true,text:metric,color:'#000',font:{size:13,weight:'bold'}},
+              ticks:{color:'#000',font:{size:12,weight:'bold'}}, grid:{color:'#eef2f6'} },
+          x:{ title:{display:true,text:'Epi Week',color:'#000',font:{size:12,weight:'bold'}},
+              ticks:{color:'#000',font:{size:10,weight:'bold'},maxRotation:90,minRotation:90,autoSkip:false}, grid:{display:false} },
+        },
+        plugins:{
+          legend:{position:'top',labels:{color:'#000',boxWidth:20,boxHeight:3,font:{size:12,weight:'bold'},padding:12}},
+          tooltip:{titleFont:{size:13},bodyFont:{size:13},padding:10,
+            callbacks:{
+              label:ctx=>` ${ctx.dataset.label}: ${ctx.parsed.y??'no report'}`,
+              afterBody:items=>{const i=items[0].dataIndex;const t=rowThr(rows[i],sKey);return t?`Baseline N: ${t.n}`:'No baseline (fewer than 2 values)';},
+            }},
+        },
+      }
+    });
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
 //  TAB SWITCHING
 // ═══════════════════════════════════════════════════════════════
 function showCfgTab(t){
@@ -1428,75 +1907,103 @@ function showCfgTab(t){
 function showTab(t){
   document.getElementById('tabBtnDownload').classList.toggle('active',t==='download');
   document.getElementById('tabBtnAnalysis').classList.toggle('active',t==='analysis');
+  document.getElementById('tabBtnEpi').classList.toggle('active',t==='epi');
   document.getElementById('tabDownload').classList.toggle('active',t==='download');
   document.getElementById('tabAnalysis').classList.toggle('active',t==='analysis');
+  document.getElementById('tabEpi').classList.toggle('active',t==='epi');
 }
 
 // ═══════════════════════════════════════════════════════════════
 //  REPRODUCIBLE CODE
 // ═══════════════════════════════════════════════════════════════
-function downloadR(){
-  const s=ST.cfgStart||'2026-W1',e=ST.cfgEnd||'2026-W52';
-  triggerDL(`# NMCP Sierra Leone — eIDSR Malaria Weekly Data Extract
-# Period: ${s} to ${e} | ICF-SL
+function _scriptHeader(){
+  const s=ST.cfgStart||'2026-W01',e=ST.cfgEnd||'2026-W52',bf=ST.baseFrom||2021,bt=ST.baseTo||2025;
+  return {s,e,bf,bt,head:`# NMCP Sierra Leone · eIDSR Malaria Weekly Epidemic Thresholds | ICF-SL
+# Baseline years: ${bf} to ${bt}   Monitoring weeks: ${s} to ${e}
 # Dataset: IDSR Weekly Disease Report (rq0LNr72Ndo)
 # Data elements: EIDSR Total Clinical Malaria cases (KnYtrL5s7vH),
-#   EIDSR Total Malaria cases positive (wWScmbz9N2G),
-#   EIDSR Typhoid Fever (wD5OJhvG4rA)
-# COCs: <5y cases (e079rjYqlMH), <5y deaths (C5qLGpw4uet),
-#       5+y cases (jpmVF8rhBNA), 5+y deaths (Ciavs7v4qYa)
-# Outlier: IQR (Q3 + 3.0*IQR) per facility-year-variable; outliers replaced with the median (whole number)
-
-library(httr); library(dplyr)
+#   EIDSR Total Malaria cases positive (wWScmbz9N2G), EIDSR Total Malaria cases tested (RZstMMX0Mnl)
+# COCs: <5y cases (e079rjYqlMH), <5y deaths (C5qLGpw4uet), 5+y cases (jpmVF8rhBNA), 5+y deaths (Ciavs7v4qYa)
+# Thresholds: per facility, per series, per epi week. The baseline set for week w is the value of
+#   week w in every baseline year (unreported weeks left out; W53 falls back to W52 in 52 week years).
+#   Q3 = 75th percentile (type 7), Mean, Mean + 2 SD, Mean + 3 SD (sample SD). Needs >= 2 baseline values.
+#   A monitoring week is flagged for a method when value > threshold.
+`};
+}
+function _mkPeriods(){
+  const s=parseWeekInput(ST.cfgStart||'2026-W01'),e=parseWeekInput(ST.cfgEnd||'2026-W52');
+  return {mon:weekRange(s,e).map(periodStr)};
+}
+function downloadR(){
+  const {s,e,bf,bt,head}=_scriptHeader();const {mon}=_mkPeriods();
+  triggerDL(head+`
+library(httr); library(dplyr); library(tidyr)
 
 BASE_URL <- "https://sl.dhis2.org/hmis"
 USERNAME <- "your_username"; PASSWORD <- "your_password"
 auth <- authenticate(USERNAME, PASSWORD)
 
-DE <- c("KnYtrL5s7vH","wWScmbz9N2G","wD5OJhvG4rA")
-COC <- c("e079rjYqlMH","C5qLGpw4uet","jpmVF8rhBNA","Ciavs7v4qYa")
-dx_str <- paste(apply(expand.grid(DE,COC),1,function(x)paste(x,collapse=".")),collapse=";")
+DE_KEY     <- c(KnYtrL5s7vH="clinical", wWScmbz9N2G="positive", RZstMMX0Mnl="tested")
+COC_AGE    <- c(e079rjYqlMH="u5", C5qLGpw4uet="u5", jpmVF8rhBNA="o5", Ciavs7v4qYa="o5")
+COC_METRIC <- c(e079rjYqlMH="cases", C5qLGpw4uet="deaths", jpmVF8rhBNA="cases", Ciavs7v4qYa="deaths")
+dx_str <- paste(apply(expand.grid(names(DE_KEY), names(COC_AGE)), 1, paste, collapse="."), collapse=";")
 
-# Org units (Level 5)
-ou_resp <- GET(paste0(BASE_URL,"/api/organisationUnits.json?level=5&fields=id,displayName,level,ancestors[id,displayName,level]&paging=false&pageSize=50000"),auth)
-ou_data <- content(ou_resp,"parsed")$organisationUnits
+iso_weeks <- function(y) { p <- function(x) (x + x%/%4 - x%/%100 + x%/%400) %% 7; ifelse(p(y)==4 | p(y-1)==3, 53, 52) }
+BASE_YEARS <- ${bf}:${bt}
+base_periods <- unlist(lapply(BASE_YEARS, function(y) paste0(y, "W", 1:iso_weeks(y))))
+mon_periods  <- c(${mon.map(p=>'"'+p+'"').join(',')})
 
-# Fetch weekly analytics — supply your own list of ISO week periods, e.g.:
-periods <- paste0("2026W",1:52,collapse=";")
-url <- paste0(BASE_URL,"/api/analytics.json?dimension=dx:",dx_str,"&dimension=pe:",periods,"&dimension=ou:LEVEL-5&displayProperty=NAME&paging=false&ignoreLimit=true")
-resp <- GET(url,auth); dat <- content(resp,"parsed")
-raw_df <- bind_rows(lapply(dat$rows,function(r)data.frame(dx=r[[1]],period=r[[2]],ou_id=r[[3]],value=as.numeric(r[[4]]))))
-raw_df <- raw_df[raw_df$value>0,]
+fetch <- function(periods) {
+  chunks <- split(periods, ceiling(seq_along(periods)/13))
+  bind_rows(lapply(chunks, function(pe) {
+    url <- paste0(BASE_URL, "/api/analytics.json?dimension=dx:", dx_str, "&dimension=pe:", paste(pe, collapse=";"),
+                  "&dimension=ou:LEVEL-5&displayProperty=NAME&paging=false&ignoreLimit=true")
+    rows <- content(GET(url, auth), "parsed")$rows
+    if (!length(rows)) return(NULL)
+    data.frame(dx=sapply(rows,\`[[\`,1), period=sapply(rows,\`[[\`,2), ou_id=sapply(rows,\`[[\`,3),
+               value=as.numeric(sapply(rows,\`[[\`,4)))
+  }))
+}
 
-# Outlier detection + median replacement, per facility per year per variable
-iqr_upper <- function(x){
-  rep<-x[!is.na(x)&x>0]; if(length(rep)<4) return(NA_real_)
-  q<-quantile(rep,c(0.25,0.75),na.rm=TRUE,type=7)
-  unname(q[2]+3.0*(q[2]-q[1])) }
-med_of <- function(x){ rep<-x[!is.na(x)&x>0]; if(!length(rep)) return(NA_real_); round(median(rep)) }
-raw_df$year <- as.integer(substr(raw_df$period,1,4))
-raw_df <- raw_df |> group_by(ou_id,year,dx) |>
-  mutate(upper_bound=round(iqr_upper(value)), year_median=round(med_of(value)),
-         outlier=ifelse(!is.na(upper_bound)&value>upper_bound,"Yes","No"),
-         value_correct=ifelse(outlier=="Yes",year_median,value)) |> ungroup()
+tidy_series <- function(raw) {
+  raw <- raw |> filter(value > 0) |>
+    mutate(de=sub("[.].*","",dx), coc=sub(".*[.]","",dx),
+           condition=DE_KEY[de], age=COC_AGE[coc], metric=COC_METRIC[coc],
+           year=as.integer(substr(period,1,4)), week=as.integer(sub(".*W","",period)))
+  by_age   <- raw |> group_by(ou_id, year, week, series=paste(condition, age, metric, sep="_")) |> summarise(value=sum(value), .groups="drop")
+  combined <- raw |> group_by(ou_id, year, week, series=paste(condition, metric, sep="_")) |> summarise(value=sum(value), .groups="drop")
+  bind_rows(by_age, combined)
+}
 
-write.csv(raw_df,paste0("NMCP_eIDSR_",s,"_",e,".csv"),row.names=FALSE)
-cat("Done. File saved.\n")
-`,`NMCP_eIDSR_${s}_${e}.R`);
+base <- tidy_series(fetch(base_periods))
+mon  <- tidy_series(fetch(mon_periods))
+
+# Week 53 in a 52 week baseline year uses that year's W52
+base53 <- base |> filter(week == 52, iso_weeks(year) == 52) |> mutate(week = 53L)
+base_all <- bind_rows(base, base53)
+
+thr <- base_all |> group_by(ou_id, series, week) |>
+  summarise(baseline_n=n(),
+            q3   = round(quantile(value, 0.75, type=7), 1),
+            mean = round(mean(value), 1),
+            sd   = round(sd(value), 1),
+            mean_2sd = round(mean(value) + 2*sd(value), 1),
+            mean_3sd = round(mean(value) + 3*sd(value), 1), .groups="drop") |>
+  filter(baseline_n >= 2)
+
+out <- mon |> left_join(thr, by=c("ou_id","series","week")) |>
+  mutate(above_q3 = value > q3, above_mean = value > mean,
+         above_mean_2sd = value > mean_2sd, above_mean_3sd = value > mean_3sd)
+
+write.csv(out,  paste0("NMCP_eIDSR_monitoring_${s}_${e}_baseline_${bf}_${bt}.csv"), row.names=FALSE)
+write.csv(base, paste0("NMCP_eIDSR_baseline_${bf}_${bt}.csv"), row.names=FALSE)
+cat("Done. Files saved.\\n")
+`,`NMCP_eIDSR_thresholds_${s}_${e}_baseline_${bf}_${bt}.R`);
 }
 
 function downloadPy(){
-  const s=ST.cfgStart||'2026-W1',e=ST.cfgEnd||'2026-W52';
-  triggerDL(`# NMCP Sierra Leone — eIDSR Malaria Weekly Data Extract
-# Period: ${s} to ${e} | ICF-SL
-# Dataset: IDSR Weekly Disease Report (rq0LNr72Ndo)
-# Data elements: EIDSR Total Clinical Malaria cases (KnYtrL5s7vH),
-#   EIDSR Total Malaria cases positive (wWScmbz9N2G),
-#   EIDSR Typhoid Fever (wD5OJhvG4rA)
-# COCs: <5y cases (e079rjYqlMH), <5y deaths (C5qLGpw4uet),
-#       5+y cases (jpmVF8rhBNA), 5+y deaths (Ciavs7v4qYa)
-# Outlier: IQR (Q3 + 3.0*IQR) per facility-year-variable; outliers replaced with the median (whole number)
-
+  const {s,e,bf,bt,head}=_scriptHeader();const {mon}=_mkPeriods();
+  triggerDL(head+`
 import requests, pandas as pd, numpy as np, itertools
 from requests.auth import HTTPBasicAuth
 
@@ -1504,38 +2011,67 @@ BASE_URL = "https://sl.dhis2.org/hmis"
 USERNAME = "your_username"; PASSWORD = "your_password"
 auth = HTTPBasicAuth(USERNAME, PASSWORD)
 
-DE = ["KnYtrL5s7vH","wWScmbz9N2G","wD5OJhvG4rA"]
-COC = ["e079rjYqlMH","C5qLGpw4uet","jpmVF8rhBNA","Ciavs7v4qYa"]
-dx_str = ";".join(f"{d}.{c}" for d,c in itertools.product(DE,COC))
+DE_KEY     = {"KnYtrL5s7vH":"clinical", "wWScmbz9N2G":"positive", "RZstMMX0Mnl":"tested"}
+COC_AGE    = {"e079rjYqlMH":"u5", "C5qLGpw4uet":"u5", "jpmVF8rhBNA":"o5", "Ciavs7v4qYa":"o5"}
+COC_METRIC = {"e079rjYqlMH":"cases", "C5qLGpw4uet":"deaths", "jpmVF8rhBNA":"cases", "Ciavs7v4qYa":"deaths"}
+dx_str = ";".join(f"{d}.{c}" for d,c in itertools.product(DE_KEY, COC_AGE))
 
-ou_data = requests.get(BASE_URL+"/api/organisationUnits.json?level=5&fields=id,displayName,level,ancestors[id,displayName,level]&paging=false&pageSize=50000",auth=auth).json()["organisationUnits"]
+def iso_weeks(y):
+    p = lambda x: (x + x//4 - x//100 + x//400) % 7
+    return 53 if p(y)==4 or p(y-1)==3 else 52
 
-# Supply your own list of ISO week periods, e.g.:
-periods = ";".join(f"2026W{w}" for w in range(1,53))
-data = requests.get(BASE_URL+f"/api/analytics.json?dimension=dx:{dx_str}&dimension=pe:{periods}&dimension=ou:LEVEL-5&displayProperty=NAME&paging=false&ignoreLimit=true",auth=auth).json()
-raw_df = pd.DataFrame([{"dx":r[0],"period":r[1],"ou_id":r[2],"value":float(r[3])} for r in data.get("rows",[])])
-raw_df = raw_df[raw_df["value"]>0]
-raw_df["year"] = raw_df["period"].str[:4].astype(int)
+BASE_YEARS = list(range(${bf}, ${bt}+1))
+base_periods = [f"{y}W{w}" for y in BASE_YEARS for w in range(1, iso_weeks(y)+1)]
+mon_periods  = [${mon.map(p=>'"'+p+'"').join(',')}]
 
-def iqr_upper(x):
-    rep=x[x>0].dropna()
-    if len(rep)<4: return np.nan
-    q1,q3=np.percentile(rep,25),np.percentile(rep,75)
-    return round(q3+3.0*(q3-q1))
-def med_of(x):
-    rep=x[x>0].dropna()
-    return round(np.median(rep)) if len(rep) else np.nan
+def fetch(periods):
+    out = []
+    for i in range(0, len(periods), 13):
+        pe = ";".join(periods[i:i+13])
+        url = (f"{BASE_URL}/api/analytics.json?dimension=dx:{dx_str}&dimension=pe:{pe}"
+               "&dimension=ou:LEVEL-5&displayProperty=NAME&paging=false&ignoreLimit=true")
+        out += requests.get(url, auth=auth).json().get("rows", [])
+    return pd.DataFrame(out, columns=["dx","period","ou_id","value"]).astype({"value":float})
 
-g=raw_df.groupby(["ou_id","year","dx"])["value"]
-raw_df["upper_bound"]=g.transform(iqr_upper)
-raw_df["year_median"]=g.transform(med_of)
-is_out=raw_df["upper_bound"].notna()&(raw_df["value"]>raw_df["upper_bound"])
-raw_df["outlier"]=np.where(is_out,"Yes","No")
-raw_df["value_correct"]=np.where(is_out,raw_df["year_median"],raw_df["value"])
+def tidy_series(raw):
+    raw = raw[raw["value"] > 0].copy()
+    raw["condition"] = raw["dx"].str.split(".").str[0].map(DE_KEY)
+    coc = raw["dx"].str.split(".").str[1]
+    raw["age"], raw["metric"] = coc.map(COC_AGE), coc.map(COC_METRIC)
+    raw["year"] = raw["period"].str[:4].astype(int)
+    raw["week"] = raw["period"].str.split("W").str[1].astype(int)
+    by_age = raw.assign(series=raw.condition+"_"+raw.age+"_"+raw.metric)
+    comb   = raw.assign(series=raw.condition+"_"+raw.metric)
+    keys = ["ou_id","year","week","series"]
+    return pd.concat([by_age.groupby(keys, as_index=False)["value"].sum(),
+                      comb.groupby(keys, as_index=False)["value"].sum()])
 
-raw_df.to_csv(f"NMCP_eIDSR_{s}_{e}.csv",index=False)
+base = tidy_series(fetch(base_periods))
+mon  = tidy_series(fetch(mon_periods))
+
+# Week 53 in a 52 week baseline year uses that year's W52
+b53 = base[(base.week==52) & (base.year.map(iso_weeks)==52)].assign(week=53)
+base_all = pd.concat([base, b53])
+
+g = base_all.groupby(["ou_id","series","week"])["value"]
+thr = pd.DataFrame({
+    "baseline_n": g.size(),
+    "q3":   g.quantile(0.75).round(1),
+    "mean": g.mean().round(1),
+    "sd":   g.std(ddof=1).round(1),
+    "mean_2sd": (g.mean() + 2*g.std(ddof=1)).round(1),
+    "mean_3sd": (g.mean() + 3*g.std(ddof=1)).round(1),
+}).reset_index()
+thr = thr[thr.baseline_n >= 2]
+
+out = mon.merge(thr, on=["ou_id","series","week"], how="left")
+for col, name in [("q3","above_q3"),("mean","above_mean"),("mean_2sd","above_mean_2sd"),("mean_3sd","above_mean_3sd")]:
+    out[name] = np.where(out[col].isna(), None, out["value"] > out[col])
+
+out.to_csv("NMCP_eIDSR_monitoring_${s}_${e}_baseline_${bf}_${bt}.csv", index=False)
+base.to_csv("NMCP_eIDSR_baseline_${bf}_${bt}.csv", index=False)
 print("Done.")
-`,`NMCP_eIDSR_${s}_${e}.py`);
+`,`NMCP_eIDSR_thresholds_${s}_${e}_baseline_${bf}_${bt}.py`);
 }
 
 function downloadToolHTML(){
