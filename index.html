@@ -122,20 +122,20 @@ html,body{width:100%;min-height:100vh;font-family:'Segoe UI',Roboto,Arial,sans-s
         <div style="font-size:12px;color:#2c4b62;line-height:1.75;">
 
           <div style="background:var(--blue-lt);border-radius:8px;padding:14px 16px;margin-bottom:18px;">
-            <strong style="color:var(--blue);">Purpose.</strong> This tool extracts <strong>weekly</strong> surveillance data reported through the eIDSR (electronic Integrated Disease Surveillance and Response) system — clinical, confirmed-positive and tested malaria — for every Hospital, Clinic, CHC, CHP and MCHP in the DHIS2 platform, cleans it, and produces analysis-ready tables. Every step below is applied automatically on each run.
+            <strong style="color:var(--blue);">Purpose.</strong> This tool extracts <strong>weekly</strong> surveillance data reported through the eIDSR (electronic Integrated Disease Surveillance and Response) system, covering clinical, confirmed positive and tested malaria, for every Hospital, Clinic, CHC, CHP and MCHP in the DHIS2 platform, cleans it, and produces tables that are ready for analysis. Every step below is applied automatically on each run.
           </div>
 
           <div class="m-step"><div class="m-num">1</div><div>
             <div class="m-title">Fetch the facility registry</div>
-            All <strong>Level-5 (PHU)</strong> org units are pulled from DHIS2 with their full hierarchy — District (Level 2) and Chiefdom (Level 4).
+            All <strong>Level 5 (PHU)</strong> org units are pulled from DHIS2 with their full hierarchy, meaning District (Level 2) and Chiefdom (Level 4).
           </div></div>
 
           <div class="m-step"><div class="m-num">2</div><div>
             <div class="m-title">Apply exclusions <span class="m-tag">before any data is fetched</span></div>
-            A facility is dropped entirely — appearing in no analysis, denominator, or export — if it is:
+            A facility is dropped entirely, so it appears in no analysis, no denominator and no export, if it is:
             <ul class="m-list">
               <li><strong>A laboratory</strong> (name contains "Laboratory"). These are not health facilities, yet many are typed <em>Hospital</em> in the source, which would inflate the Hospital count.</li>
-              <li><strong>A Marie Stopes facility</strong> — excluded by NMCP request (specialised SRH provider).</li>
+              <li><strong>A Marie Stopes facility</strong> , excluded by NMCP request (specialised SRH provider).</li>
             </ul>
                         Only the five health facility types are kept, and the rule is <strong>strict</strong>: the <strong>last word</strong> of the facility name must be exactly <strong>Hospital, Clinic, CHC, CHP or MCHP</strong>. The one exception is <strong>Clinic</strong>: a name that contains the word Clinic anywhere is kept as a Clinic (for example "St John Clinic and Nursing Home"). Misspellings (such as "Climic") and names ending in "Home" without the word Clinic are excluded. Facilities with the same name under different parents (chiefdom or district) are separate facilities and <strong>both are included</strong>, because each is identified by its own OU ID.
             <div class="m-note">The full list of excluded facilities, with the reason for each, is shown and downloadable after the run.</div>
@@ -160,14 +160,14 @@ html,body{width:100%;min-height:100vh;font-family:'Segoe UI',Roboto,Arial,sans-s
               <div class="m-eghead" style="margin-top:10px;">Category option combos (applied to every data element above)</div>
               <table class="m-tbl">
                 <tr><th>Category option combo</th><th>UID</th></tr>
-                <tr><td>&lt;5 years old — cases</td><td><code>e079rjYqlMH</code></td></tr>
-                <tr><td>&lt;5 years old — deaths</td><td><code>C5qLGpw4uet</code></td></tr>
-                <tr><td>5+ years old — cases</td><td><code>jpmVF8rhBNA</code></td></tr>
-                <tr><td>5+ years old — deaths</td><td><code>Ciavs7v4qYa</code></td></tr>
+                <tr><td>&lt;5 years old, cases</td><td><code>e079rjYqlMH</code></td></tr>
+                <tr><td>&lt;5 years old, deaths</td><td><code>C5qLGpw4uet</code></td></tr>
+                <tr><td>5+ years old, cases</td><td><code>jpmVF8rhBNA</code></td></tr>
+                <tr><td>5+ years old, deaths</td><td><code>Ciavs7v4qYa</code></td></tr>
               </table>
-              <div class="m-calc" style="margin-top:6px;">3 data elements × 4 category option combos = <b>12 values fetched per facility per week</b>. Each of the 12 stays split by age group (&lt;5y / 5+y) — the epidemic threshold is computed separately for each of the 12, so an under-5 outbreak is never diluted by combining it with the over-5 numbers.</div>
+              <div class="m-calc" style="margin-top:6px;">3 data elements × 4 category option combos = <b>12 values fetched per facility per week</b>. Each of the 12 stays split by age group (&lt;5y or 5+y), because the epidemic threshold is computed separately for each of the 12, so an outbreak among children under five is never diluted by combining it with the older age group.</div>
             </div>
-            <div class="m-note">Unlike monthly HMIS forms, eIDSR periods are <strong>ISO weeks</strong> (Monday–Sunday), coded as <code>YYYYWn</code> (e.g. <code>2026W5</code>). A year has 52 or 53 such weeks depending on where 1 January falls.</div>
+            <div class="m-note">Unlike monthly HMIS forms, eIDSR periods are <strong>ISO weeks</strong> (Monday to Sunday), coded as <code>YYYYWn</code> (e.g. <code>2026W5</code>). A year has 52 or 53 such weeks depending on where 1 January falls.</div>
           </div></div>
 
           <div class="m-step"><div class="m-num">4</div><div>
@@ -178,15 +178,15 @@ html,body{width:100%;min-height:100vh;font-family:'Segoe UI',Roboto,Arial,sans-s
           <div class="m-step"><div class="m-num">5</div><div>
             <div class="m-title">Classify facilities as Active or Inactive</div>
             <ul class="m-list">
-              <li><strong>Active</strong> — reported at least one eIDSR value during the selected period.</li>
-              <li><strong>Inactive</strong> — present in the DHIS2 registry but reported no eIDSR data at all for the period.</li>
+              <li><strong>Active</strong> , meaning it reported at least one eIDSR value during the selected period.</li>
+              <li><strong>Inactive</strong> , meaning it is present in the DHIS2 registry but reported no eIDSR data at all for the period.</li>
             </ul>
-            <div class="m-note">Only active facilities are used as the denominator in the reporting rates below — an inactive facility is an <em>existence</em> problem, not a reporting-behaviour problem, and separating the two keeps both measurable.</div>
+            <div class="m-note">Only active facilities are used as the denominator in the reporting rates below, because an inactive facility is an <em>existence</em> problem, not a problem of reporting behaviour, and separating the two keeps both measurable.</div>
           </div></div>
 
           <div class="m-step"><div class="m-num">6</div><div>
             <div class="m-title">Build a complete period grid</div>
-            For every <strong>active</strong> facility, a row is created for <strong>every week</strong> of the selected range — including weeks with no data. Those appear explicitly with <strong>Reported = No</strong> rather than silently disappearing, so reporting gaps are visible and countable.
+            For every <strong>active</strong> facility, a row is created for <strong>every week</strong> of the selected range, including weeks with no data. Those appear explicitly with <strong>Reported = No</strong> rather than silently disappearing, so reporting gaps are visible and countable.
           </div></div>
 
           <div class="m-step"><div class="m-num">7</div><div>
@@ -210,7 +210,7 @@ html,body{width:100%;min-height:100vh;font-family:'Segoe UI',Roboto,Arial,sans-s
               <tr><th>Method</th><th>Threshold</th></tr>
               <tr><td>Upper quartile (Q3)</td><td>The 75th percentile of the baseline set, which is the upper bound of the interquartile range</td></tr>
               <tr><td>95th percentile (P95)</td><td>The value below which 95% of the baseline set falls</td></tr>
-              <tr><td>Mean</td><td>The average of the baseline set (the C-SUM style line)</td></tr>
+              <tr><td>Mean</td><td>The average of the baseline set, which is the C SUM style line</td></tr>
               <tr><td>Mean + 2 SD</td><td>Average plus two standard deviations</td></tr>
               <tr><td>Mean + 3 SD</td><td>Average plus three standard deviations</td></tr>
             </table>
@@ -229,7 +229,7 @@ html,body{width:100%;min-height:100vh;font-family:'Segoe UI',Roboto,Arial,sans-s
 
           <div class="m-step"><div class="m-num">10</div><div>
             <div class="m-title">Produce the outputs</div>
-            The monitoring file has one row per facility per week. Each series carries its <strong>value</strong>, the <strong>baseline N</strong>, the five thresholds (<strong>Q3, P95, Mean, Mean + 2 SD, Mean + 3 SD</strong>), the <strong>baseline SD</strong>, and an <strong>Above threshold</strong> column that lists every method the week exceeded. The baseline data (raw weekly values for the baseline years) downloads separately, as do the flagged weeks. Other analyses include weekly reporting rates by facility type, facility activity, excluded facilities and yearly totals, all for the monitoring period and all downloadable as CSV or Excel.
+            The monitoring file has one row per facility per week. Each series carries its <strong>value</strong>, the <strong>baseline N</strong>, the five thresholds (<strong>Q3, P95, Mean, Mean + 2 SD, Mean + 3 SD</strong>), the <strong>baseline SD</strong>, and an <strong>Above threshold</strong> column that lists every method the week exceeded. Two more files come with it: the raw baseline year data (one row per facility per week per year) and a weekly threshold file (one row per facility for every epi week of the year, no year column) holding the value of every method for every series. The flagged weeks download separately too. Other analyses include weekly reporting rates by facility type, facility activity, excluded facilities and yearly totals, all for the monitoring period and all downloadable as CSV or Excel.
           </div></div>
 
         </div>
@@ -327,11 +327,26 @@ html,body{width:100%;min-height:100vh;font-family:'Segoe UI',Roboto,Arial,sans-s
           </div>
         </div>
         <div class="dl-card">
-          <div class="dl-card-head" style="background:#0f766e;">Baseline Weekly Data</div>
+          <div class="dl-card-head" style="background:#155e75;">Baseline Year Data</div>
           <div class="dl-card-body">
-            <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">Baseline years. One row per facility per week with the raw weekly values of all 18 series. These are the values the thresholds were built from.</div>
+            <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">The raw baseline years. One row per facility per week per year, with the weekly value of each of the 18 series. These are the values the thresholds were built from.</div>
             <button class="btn btn-primary" onclick="downloadCSV('baseline')">↓ Baseline CSV</button>
             <button class="btn btn-outline" onclick="downloadExcel('baseline')">↓ Baseline Excel</button>
+          </div>
+        </div>
+        <div class="dl-card">
+          <div class="dl-card-head" style="background:#0f766e;">Weekly Thresholds</div>
+          <div class="dl-card-body">
+            <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">One row per facility for every epi week of the year (W1 to W52, or W53 where a baseline year has one), no year column. A Facility No column numbers the facilities 1 to N, so the last number is how many facilities are in the file. For each of the 18 series: baseline N, the week used, and the value of all five methods (Q3, P95, Mean, Mean + 2 SD, Mean + 3 SD) plus the SD.</div>
+            <button class="btn btn-primary" onclick="downloadCSV('threshold')">↓ Thresholds CSV</button>
+            <button class="btn btn-outline" onclick="downloadExcel('threshold')">↓ Thresholds Excel</button>
+          </div>
+        </div>
+        <div class="dl-card">
+          <div class="dl-card-head" style="background:#7c2d12;">Interactive Results (HTML)</div>
+          <div class="dl-card-body">
+            <div style="font-size:11px;color:var(--muted);margin-bottom:4px;">This whole tool with the current run's data saved inside it. Reopen the file and the charts, filters, year test, flagged table and all downloads work without fetching DHIS2 again.</div>
+            <button class="btn btn-primary" onclick="downloadResultsHTML()">↓ Results HTML</button>
           </div>
         </div>
         <div class="dl-card">
@@ -1188,20 +1203,47 @@ function buildHeaders(){
   EPI_SERIES.forEach(s=>{
     epiCols.push(s.label, `${s.label} Baseline N`, `${s.label} Baseline Week Used`, ...EPI_METHODS.map(m=>`${s.label} ${m.short}`), `${s.label} Baseline SD`, `${s.label} Above Threshold`);
   });
-  return {
-    facility:[...BASE_HDR,...epiCols,'Reported'],
-    baseline:[...BASE_HDR,...EPI_SERIES.map(s=>s.label),'Reported'],
-  };
+  const thrCols=[];
+  EPI_SERIES.forEach(s=>{
+    thrCols.push(`${s.label} Baseline N`, `${s.label} Baseline Week Used`, ...EPI_METHODS.map(m=>`${s.label} ${m.short}`), `${s.label} Baseline SD`);
+  });
+  return {facility:[...BASE_HDR,...epiCols,'Reported'],
+          baseline:[...BASE_HDR,...EPI_SERIES.map(s=>s.label),'Reported'],
+          threshold:['Facility No','District','Chiefdom','Facility','OU ID','Type','Ownership','Week',...thrCols]};
 }
 function getRows(type){
   const base=r=>[r.district,r.chiefdom,r.facility,r.ou_id,r.hfType,r.ownership||'TBD',r.year,r.week,r.period];
+  if(type==='threshold'){
+    // One row per facility per epi week: the threshold of every method for every series.
+    // No year, because a threshold depends on the facility, the series and the week only.
+    // Every epi week of the year (W1 to W52, or W53 when a baseline year has one),
+    // not only the weeks under review
+    const maxWk=Math.max(...(ST.baseYears||[]).map(isoWeeksInYear),52);
+    const weeks=[];for(let w=1;w<=maxWk;w++)weeks.push(w);
+    const ids=new Set([...(ST.baseRows||[]).map(r=>r.ou_id),...ST.rows.map(r=>r.ou_id)]);
+    const facs=[...ids].map(id=>ST.ouHierarchy[id]).filter(Boolean)
+      .sort((a,b)=>a.districtName.localeCompare(b.districtName)||a.chiefdomName.localeCompare(b.chiefdomName)||a.name.localeCompare(b.name));
+    const out=[];
+    // Facility No runs 1..N in the sorted facility order, the same number on every
+    // week of that facility, so the last number is the facility count in the file
+    facs.forEach((ou,fi)=>weeks.forEach(wk=>{
+      const cols=[fi+1,ou.districtName,ou.chiefdomName,ou.name,ou.id,ou.hfType,getOwnership(ou.chiefdomName,ou.name),wk];
+      EPI_SERIES.forEach(s=>{
+        const t=statsFor(ou.id,s.key,wk);
+        cols.push(t?t.n:'', srcLabel(t), ...EPI_METHODS.map(m=>t?t[m.id]:''), t?t.sd:'');
+      });
+      out.push(cols);
+    }));
+    return out;
+  }
   if(type==='baseline'){
+    // Raw baseline year data: the values the thresholds were built from
     return (ST.baseRows||[]).map(r=>[...base(r),...EPI_SERIES.map(s=>r[s.field]??''),r.reported??'']);
   }
   return ST.rows.map(r=>{
     const cols=[...base(r)];
     EPI_SERIES.forEach(s=>{
-      const t=r[s.key+'_thr'];
+      const t=rowThr(r,s.key);
       cols.push(r[s.field]??'', t?t.n:'', srcLabel(t), ...EPI_METHODS.map(m=>t?t[m.id]:''), t?t.sd:'', t&&t.none?'No baseline':t?methodsExceeded(r,s):'');
     });
     cols.push(r.reported??'');
@@ -1246,7 +1288,9 @@ function _saveBlob(content,fname,mime){
 function triggerDL(content, fname){ _saveBlob(content,fname,/\.csv$/i.test(fname)?'text/csv':'text/plain'); }
 function _csvCell(c){ return `"${String(c??'').replace(/"/g,'""')}"`; }
 function _fileTag(type){
-  return type==='baseline' ? `baseline_${ST.baseFrom}_${ST.baseTo}` : `${type}_${ST.cfgStart}_${ST.cfgEnd}_baseline_${ST.baseFrom}_${ST.baseTo}`;
+  if(type==='threshold')return `thresholds_by_week_baseline_${ST.baseFrom}_${ST.baseTo}`;
+  if(type==='baseline')return `baseline_data_${ST.baseFrom}_${ST.baseTo}`;
+  return `${type}_${ST.cfgStart}_${ST.cfgEnd}_baseline_${ST.baseFrom}_${ST.baseTo}`;
 }
 function downloadCSV(type){
   const hdrs=buildHeaders()[type];
@@ -1258,7 +1302,7 @@ function downloadExcel(type){
   const wb=XLSX.utils.book_new();
   const hdrs=buildHeaders()[type];
   const rows=getRows(type);
-  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([hdrs,...rows]),type==='baseline'?'Baseline':'Monitoring');
+  XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet([hdrs,...rows]),type==='threshold'?'Thresholds':type==='baseline'?'Baseline Data':'Monitoring');
   if(type==='facility'){
     const info=[['Setting','Value'],
       ['Baseline years',`${ST.baseFrom} to ${ST.baseTo}`],
@@ -1752,13 +1796,18 @@ function showCfgTab(t){
   document.getElementById('cfgMethod').classList.toggle('active',t==='method');
   document.getElementById('cfgExtract').classList.toggle('active',t==='extract');
 }
+// method and config are only present in a saved results file, where the
+// Methodology and Configure Extract panes are moved into this tab bar
+const TABS={method:['tabBtnMethod','cfgMethod'], config:['tabBtnConfig','cfgExtract'],
+            epi:['tabBtnEpi','tabEpi'], analysis:['tabBtnAnalysis','tabAnalysis'],
+            download:['tabBtnDownload','tabDownload']};
 function showTab(t){
-  document.getElementById('tabBtnDownload').classList.toggle('active',t==='download');
-  document.getElementById('tabBtnAnalysis').classList.toggle('active',t==='analysis');
-  document.getElementById('tabBtnEpi').classList.toggle('active',t==='epi');
-  document.getElementById('tabDownload').classList.toggle('active',t==='download');
-  document.getElementById('tabAnalysis').classList.toggle('active',t==='analysis');
-  document.getElementById('tabEpi').classList.toggle('active',t==='epi');
+  Object.keys(TABS).forEach(k=>{
+    const [b,p]=TABS[k];
+    const btn=document.getElementById(b), pane=document.getElementById(p);
+    if(btn)btn.classList.toggle('active',k===t);
+    if(pane)pane.classList.toggle('active',k===t);
+  });
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1940,6 +1989,84 @@ print("Done.")
 `,`NMCP_eIDSR_thresholds_${s}_${e}_baseline_${bf}_${bt}.py`);
 }
 
+// Save the whole tool with this run's data embedded, so it reopens showing the
+// same results, charts, filters and downloads without fetching DHIS2 again.
+function downloadResultsHTML(){
+  if(!ST.rows||!ST.rows.length){alert('Run an extract first.');return;}
+  const ouIdx={}, ous=[];
+  Object.values(ST.ouHierarchy).forEach((o,i)=>{ouIdx[o.id]=i;ous.push([o.id,o.name,o.hfType,o.chiefdomName,o.districtName]);});
+  const FIELDS=EPI_SERIES.map(s=>s.field);
+  const enc=rows=>(rows||[]).map(r=>[ouIdx[r.ou_id],r.year,r.week,r.reported==='Yes'?1:0,
+    ...FIELDS.map(f=>{const v=r[f];return (v===null||v===undefined)?null:v;})]);
+  const payload={
+    cfg:{cfgStart:ST.cfgStart,cfgEnd:ST.cfgEnd,years:ST.years,weeks:ST.weeks,
+         baseFrom:ST.baseFrom,baseTo:ST.baseTo,baseYears:ST.baseYears,baseWeeks:ST.baseWeeks,
+         startYr:ST.startYr,endYr:ST.endYr},
+    fields:FIELDS, ous, excluded:ST.excluded||[],
+    statsHTML:document.getElementById('statsRow').innerHTML,
+    mon:enc(ST.rows), base:enc(ST.baseRows),
+  };
+  const json=JSON.stringify(payload).replace(/</g,'\\u003c');
+  const old=document.getElementById('embeddedResults'); if(old)old.remove();
+  const oldBoot=document.getElementById('embeddedBoot'); if(oldBoot)oldBoot.remove();
+  let html='<!DOCTYPE html>\n'+document.documentElement.outerHTML;
+  const inject=`<script id="embeddedResults" type="application/json">${json}<\/script>\n<script id="embeddedBoot">restoreEmbedded();<\/script>\n`;
+  const END='<'+'/body>';                // built at run time so this line is not itself a match
+  const at=html.lastIndexOf(END);        // inject after the tool's own script, at the real end of the page
+  html=html.slice(0,at)+inject+html.slice(at);
+  _saveBlob(html,`NMCP_eIDSR_results_${ST.cfgStart}_${ST.cfgEnd}_baseline_${ST.baseFrom}_${ST.baseTo}.html`,'text/html');
+}
+function restoreEmbedded(){
+  const el=document.getElementById('embeddedResults'); if(!el)return;
+  const d=JSON.parse(el.textContent);
+  Object.assign(ST,d.cfg);
+  ST.ouHierarchy={};
+  const ouIds=d.ous.map(o=>{ST.ouHierarchy[o[0]]={id:o[0],name:o[1],hfType:o[2],chiefdomName:o[3],districtName:o[4]};return o[0];});
+  ST.excluded=d.excluded;
+  const dec=arr=>arr.map(a=>{
+    const id=ouIds[a[0]], ou=ST.ouHierarchy[id];
+    const r={ou_id:id,facility:ou.name,hfType:ou.hfType,chiefdom:ou.chiefdomName,district:ou.districtName,
+      ownership:getOwnership(ou.chiefdomName,ou.name),year:a[1],week:a[2],period:`${a[1]}W${a[2]}`,
+      reported:a[3]?'Yes':'No'};
+    d.fields.forEach((f,i)=>{r[f]=a[i+4];});
+    return r;
+  });
+  ST.rows=dec(d.mon); ST.baseRows=dec(d.base);
+  attachEpiThresholds();
+  ST.epiFlagged=getEpiFlaggedList();
+  document.getElementById('pipelineScreen').style.display='none';
+  document.getElementById('resultsSection').style.display='block';
+  // Methodology and Configure Extract become read only tabs beside the results
+  const cfg=document.getElementById('configScreen');
+  cfg.style.display='none';
+  document.getElementById('cfgBaseFrom').value=ST.baseFrom;
+  document.getElementById('cfgBaseTo').value=ST.baseTo;
+  document.getElementById('cfgStart').value=ST.cfgStart;
+  document.getElementById('cfgEnd').value=ST.cfgEnd;
+  updateCfgSummary();
+  const body=document.querySelector('#resultsSection .card-body');
+  body.appendChild(document.getElementById('cfgMethod'));
+  body.appendChild(document.getElementById('cfgExtract'));
+  document.querySelector('#resultsSection .tabbar').innerHTML=
+    `<button class="tabbtn" id="tabBtnMethod" onclick="showTab('method')">Methodology</button>
+     <button class="tabbtn" id="tabBtnConfig" onclick="showTab('config')">Configure Extract</button>
+     <button class="tabbtn" id="tabBtnEpi" onclick="showTab('epi')">Epidemic Threshold</button>
+     <button class="tabbtn" id="tabBtnAnalysis" onclick="showTab('analysis')">Analysis</button>
+     <button class="tabbtn" id="tabBtnDownload" onclick="showTab('download')">Download</button>`;
+  ['cfgMethod','cfgExtract'].forEach(id=>document.getElementById(id).querySelectorAll('input,select,textarea')
+    .forEach(el=>{el.disabled=true;el.style.background='#f1f5f9';el.style.cursor='not-allowed';}));
+  ['btnFetch','btnTest','testPanel'].forEach(id=>{const el=document.getElementById(id);if(el)el.style.display='none';});
+  const nb=document.querySelector('#resultsSection .card-head button'); if(nb)nb.style.display='none';
+  const head=document.querySelector('#resultsSection .card-head h2');
+  if(head)head.innerHTML='Saved Results <span style="font-size:12px;font-weight:600;opacity:.85;">(Methodology and Configure Extract are read only)</span>';
+  document.getElementById('statsRow').innerHTML=d.statsHTML;
+  document.getElementById('epiBaseTxt').textContent=`${ST.baseFrom} to ${ST.baseTo}`;
+  document.getElementById('epiMonTxt').textContent=`${ST.cfgStart} to ${ST.cfgEnd}`;
+  buildPreview();renderExcluded();renderActivity();renderReporting();renderYearly();
+  populateEpiFilters();renderEpi();
+  showTab('epi');
+  setPill('Saved results ✓','rgba(40,167,69,.55)');
+}
 function downloadToolHTML(){
   const blob=new Blob(['<!DOCTYPE html>\n'+document.documentElement.outerHTML],{type:'text/html;charset=utf-8'});
   const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='nmcp_eidsr_data_v1.html';
